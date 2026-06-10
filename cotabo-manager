@@ -1,0 +1,8 @@
+cd C:/Users/Riccardo Carboni/cotabo-manager
+
+git init
+git add .
+git commit -m "Primo commit completo"
+git branch -M main
+git remote add origin https://github.com/Riki177913/cotabo-manager.git
+git push -u origin main
