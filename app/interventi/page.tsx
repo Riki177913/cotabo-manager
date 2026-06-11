@@ -24,19 +24,21 @@ interface InterventoWithClient {
 }
 
 const TIPO_LABELS: Record<InterventoTipo, string> = {
-  sostituzione_chiamataxi: ' Sost. Chiamataxi',
+  sostituzione_chiamataxi: '🔄 Sost. Chiamataxi',
   sostituzione_sim_chiamataxi: '📱 Sost. SIM',
   sostituzione_batteria_caricabatteria: '🔋 Batteria/Caricab.',
   assistenza_web: '💻 Assistenza Web',
   consegna_materiale: '📦 Consegna Materiale',
-  altro: ' Altro',
+  altro: '📋 Altro',
 }
 
 export default function InterventiPage() {
   const [interventi, setInterventi] = useState<InterventoWithClient[]>([])
+  const [clients, setClients] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [filterStatus, setFilterStatus] = useState<InterventoStatus | 'all'>('all')
   const [filterTipo, setFilterTipo] = useState<InterventoTipo | 'all'>('all')
+  const [showAddModal, setShowAddModal] = useState(false)
   const supabase = createClient()
 
   useEffect(() => {
@@ -54,7 +56,13 @@ export default function InterventiPage() {
       `)
       .order('data_intervento', { ascending: false })
 
+    const { data: clientsData } = await supabase
+      .from('clients')
+      .select('id, company_name')
+      .order('company_name', { ascending: true })
+
     setInterventi(data || [])
+    setClients(clientsData || [])
     setLoading(false)
   }
 
@@ -92,9 +100,17 @@ export default function InterventiPage() {
       </header>
 
       <main className="container mx-auto p-8">
-        <div className="mb-6">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">🔧 Riepilogo Interventi</h2>
-          <p className="text-gray-600">Storico completo di tutti gli interventi tecnici</p>
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">🔧 Riepilogo Interventi</h2>
+            <p className="text-gray-600">Storico completo di tutti gli interventi tecnici</p>
+          </div>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium transition flex items-center gap-2"
+          >
+            <span>+</span> Nuovo Intervento
+          </button>
         </div>
 
         {/* Statistiche */}
@@ -216,11 +232,236 @@ export default function InterventiPage() {
             <p className="text-sm text-gray-400">
               {filterStatus !== 'all' || filterTipo !== 'all'
                 ? 'Prova a modificare i filtri'
-                : 'Nessun intervento registrato'}
+                : 'Clicca su "+ Nuovo Intervento" per aggiungere il primo'}
             </p>
           </div>
         )}
       </main>
+
+      {showAddModal && (
+        <AddInterventoModal
+          clients={clients}
+          onClose={() => setShowAddModal(false)}
+          onSuccess={() => {
+            setShowAddModal(false)
+            loadData()
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+function AddInterventoModal({ clients, onClose, onSuccess }: { 
+  clients: any[]
+  onClose: () => void
+  onSuccess: () => void 
+}) {
+  const [loading, setLoading] = useState(false)
+  const [formData, setFormData] = useState({
+    client_id: '',
+    tipo: 'sostituzione_chiamataxi' as InterventoTipo,
+    titolo: '',
+    descrizione: '',
+    status: 'in_corso' as InterventoStatus,
+    tecnico_nome: '',
+    data_intervento: new Date().toISOString().split('T')[0],
+    data_completamento: '',
+    note: '',
+  })
+  const supabase = createClient()
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+
+    if (!formData.client_id) {
+      alert('Seleziona un cliente')
+      return
+    }
+
+    setLoading(true)
+
+    const { error } = await supabase.from('interventi').insert({
+      client_id: formData.client_id,
+      tipo: formData.tipo,
+      titolo: formData.titolo,
+      descrizione: formData.descrizione || null,
+      status: formData.status,
+      tecnico_nome: formData.tecnico_nome || null,
+      data_intervento: formData.data_intervento,
+      data_completamento: formData.data_completamento || null,
+      note: formData.note || null,
+    })
+
+    if (error) {
+      alert('Errore: ' + error.message)
+      setLoading(false)
+    } else {
+      alert('Intervento aggiunto con successo!')
+      onSuccess()
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <h3 className="text-xl font-bold text-gray-900 mb-4">🔧 Nuovo Intervento</h3>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Cliente *
+            </label>
+            <select
+              value={formData.client_id}
+              onChange={(e) => setFormData({...formData, client_id: e.target.value})}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:outline-none"
+            >
+              <option value="">-- Seleziona un cliente --</option>
+              {clients.map((client) => (
+                <option key={client.id} value={client.id}>
+                  {client.company_name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Tipologia Intervento *
+            </label>
+            <select
+              value={formData.tipo}
+              onChange={(e) => setFormData({...formData, tipo: e.target.value as InterventoTipo})}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:outline-none"
+            >
+              <option value="sostituzione_chiamataxi"> Sostituzione Chiamataxi</option>
+              <option value="sostituzione_sim_chiamataxi">📱 Sostituzione SIM Chiamataxi</option>
+              <option value="sostituzione_batteria_caricabatteria"> Sostituzione Batteria/Caricabatteria</option>
+              <option value="assistenza_web">💻 Assistenza Web</option>
+              <option value="consegna_materiale">📦 Consegna Materiale</option>
+              <option value="altro">📋 Altro</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Titolo *
+            </label>
+            <input
+              type="text"
+              value={formData.titolo}
+              onChange={(e) => setFormData({...formData, titolo: e.target.value})}
+              required
+              placeholder="es. Sostituzione SIM guasta per dispositivo #1"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Descrizione
+            </label>
+            <textarea
+              value={formData.descrizione}
+              onChange={(e) => setFormData({...formData, descrizione: e.target.value})}
+              rows={3}
+              placeholder="Descrivi l'intervento effettuato..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:outline-none"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Stato *
+              </label>
+              <select
+                value={formData.status}
+                onChange={(e) => setFormData({...formData, status: e.target.value as InterventoStatus})}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:outline-none"
+              >
+                <option value="in_corso">In Corso</option>
+                <option value="completato">Completato</option>
+                <option value="annullato">Annullato</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tecnico
+              </label>
+              <input
+                type="text"
+                value={formData.tecnico_nome}
+                onChange={(e) => setFormData({...formData, tecnico_nome: e.target.value})}
+                placeholder="Nome del tecnico"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Data Intervento *
+              </label>
+              <input
+                type="date"
+                value={formData.data_intervento}
+                onChange={(e) => setFormData({...formData, data_intervento: e.target.value})}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Data Completamento
+              </label>
+              <input
+                type="date"
+                value={formData.data_completamento}
+                onChange={(e) => setFormData({...formData, data_completamento: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Note
+            </label>
+            <textarea
+              value={formData.note}
+              onChange={(e) => setFormData({...formData, note: e.target.value})}
+              rows={2}
+              placeholder="Note aggiuntive..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:outline-none"
+            />
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg font-medium transition"
+            >
+              Annulla
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium transition disabled:opacity-50"
+            >
+              {loading ? 'Salvataggio...' : '💾 Salva Intervento'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   )
 }

@@ -34,7 +34,7 @@ const TIPO_LABELS: Record<InterventoTipo, string> = {
 const TIPO_ICONS: Record<InterventoTipo, string> = {
   sostituzione_chiamataxi: '🔄',
   sostituzione_sim_chiamataxi: '📱',
-  sostituzione_batteria_caricabatteria: '',
+  sostituzione_batteria_caricabatteria: '🔋',
   assistenza_web: '💻',
   consegna_materiale: '📦',
   altro: '📋',
@@ -217,18 +217,18 @@ export default function ClienteInterventiPage() {
 
                     <div className="flex flex-wrap gap-4 text-sm text-gray-600">
                       <div className="flex items-center gap-2">
-                        <span className="text-gray-400">📅</span>
+                        <span>📅</span>
                         <span>Data: {formatDate(intervento.data_intervento)}</span>
                       </div>
                       {intervento.tecnico_nome && (
                         <div className="flex items-center gap-2">
-                          <span className="text-gray-400">👤</span>
+                          <span></span>
                           <span>Tecnico: {intervento.tecnico_nome}</span>
                         </div>
                       )}
                       {intervento.data_completamento && (
                         <div className="flex items-center gap-2">
-                          <span className="text-gray-400">✅</span>
+                          <span>✅</span>
                           <span>Completato: {formatDate(intervento.data_completamento)}</span>
                         </div>
                       )}
@@ -260,7 +260,7 @@ export default function ClienteInterventiPage() {
             <p className="text-gray-500 text-lg mb-2">Nessun intervento trovato</p>
             <p className="text-sm text-gray-400">
               {filterStatus === 'all' 
-                ? 'Clicca su "Nuovo Intervento" per aggiungere il primo intervento' 
+                ? 'Clicca su "+ Nuovo Intervento" per aggiungere il primo intervento' 
                 : 'Nessun intervento con lo stato selezionato'}
             </p>
           </div>
@@ -340,9 +340,9 @@ function AddInterventoModal({ clientId, onClose, onSuccess }: {
               required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:outline-none"
             >
-              <option value="sostituzione_chiamataxi">🔄 Sostituzione Chiamataxi</option>
+              <option value="sostituzione_chiamataxi"> Sostituzione Chiamataxi</option>
               <option value="sostituzione_sim_chiamataxi">📱 Sostituzione SIM Chiamataxi</option>
-              <option value="sostituzione_batteria_caricabatteria">🔋 Sostituzione Batteria/Caricabatteria</option>
+              <option value="sostituzione_batteria_caricabatteria"> Sostituzione Batteria/Caricabatteria</option>
               <option value="assistenza_web">💻 Assistenza Web</option>
               <option value="consegna_materiale"> Consegna Materiale</option>
               <option value="altro">📋 Altro</option>
