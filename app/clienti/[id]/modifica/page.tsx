@@ -68,12 +68,28 @@ export default function ModificaClientePage() {
     setLoading(true)
     setError('')
 
+    // ✅ FIX: Converti stringhe vuote in null per i campi date
+    const dataToSave = {
+      company_name: formData.company_name,
+      vat_number: formData.vat_number,
+      contact_name: formData.contact_name,
+      contact_phone: formData.contact_phone,
+      contact_email: formData.contact_email,
+      status: formData.status,
+      deliverer_name: formData.deliverer_name,
+      // Date: stringa vuota → null
+      chiamataxi_start_date: formData.chiamataxi_start_date || null,
+      btaxi_web_date: formData.btaxi_web_date || null,
+      material_delivery_date: formData.material_delivery_date || null,
+      chiamataxi_contract_date: formData.chiamataxi_contract_date || null,
+      chiamataxi_payment_start_date: formData.chiamataxi_payment_start_date || null,
+      chiamataxi_last_payment_date: formData.chiamataxi_last_payment_date || null,
+      updated_at: new Date().toISOString(),
+    }
+
     const { error } = await supabase
       .from('clients')
-      .update({
-        ...formData,
-        updated_at: new Date().toISOString(),
-      })
+      .update(dataToSave)
       .eq('id', clientId)
 
     if (error) {
@@ -97,7 +113,7 @@ export default function ModificaClientePage() {
     <div className="min-h-screen bg-gray-50">
       <header className="bg-blue-700 text-white p-4 shadow-md">
         <div className="container mx-auto flex justify-between items-center">
-          <h1 className="text-xl font-bold"> COTABO Manager</h1>
+          <h1 className="text-xl font-bold">COTABO Manager</h1>
           <Link href={`/clienti/${clientId}`} className="text-sm bg-blue-800 px-3 py-1 rounded hover:bg-blue-900">
             ← Torna al cliente
           </Link>
@@ -180,12 +196,12 @@ export default function ModificaClientePage() {
           </div>
 
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2"> Contratto Chiamataxi</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">Contratto Chiamataxi</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  📝 Data Sottoscrizione
+                   Data Sottoscrizione
                 </label>
                 <input
                   type="date"
@@ -196,7 +212,7 @@ export default function ModificaClientePage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                   Decorrenza Pagamenti
+                  Decorrenza Pagamenti
                 </label>
                 <input
                   type="date"
