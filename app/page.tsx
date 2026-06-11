@@ -60,7 +60,11 @@ export default function Home() {
   <h3 className="font-bold text-lg mb-2">Pagamenti</h3>
   <p className="text-sm text-gray-600">Gestione canoni Chiamataxi</p>
 </Link>
-        </div>
+        <Link href="/interventi" className="block bg-white p-6 rounded-xl shadow border border-gray-200 hover:shadow-lg hover:border-orange-400 transition">
+  <h3 className="font-bold text-lg mb-2">🔧 Interventi</h3>
+  <p className="text-sm text-gray-600">Storico interventi tecnici</p>
+</Link>
+</div>
       </main>
     </div>
   )

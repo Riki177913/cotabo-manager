@@ -448,32 +448,3 @@ export default function ClienteDettaglioPage() {
               )}
 
               <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
-                <p className="text-sm text-yellow-800">
-                  <strong>Nota di Sicurezza:</strong> Le credenziali sono visibili solo al personale autorizzato.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'interventi' && (
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-bold text-gray-900">📋 Storico Interventi</h3>
-                <Link 
-                  href={`/clienti/${clientId}/interventi`}
-                  className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition"
-                >
-                  Vedi tutti gli interventi →
-                </Link>
-              </div>
-              
-              <div className="text-center py-8 text-gray-500">
-                <p>Clicca su "Vedi tutti gli interventi" per consultare lo storico completo</p>
-              </div>
-            </div>
-          )}
-        </div>
-      </main>
-    </div>
-  )
-}
