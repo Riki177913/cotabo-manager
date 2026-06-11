@@ -25,16 +25,13 @@ export default function LoginPage() {
       })
 
       if (error) {
-        console.error('Errore login:', error)
         setError(error.message)
         setLoading(false)
       } else {
-        console.log('Login riuscito:', data)
         router.push('/')
         router.refresh()
       }
     } catch (err) {
-      console.error('Errore imprevisto:', err)
       setError('Errore imprevisto durante il login')
       setLoading(false)
     }
@@ -62,7 +59,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                placeholder="ricccarbo@gmail.com"
+                placeholder="operatore@cotabo.it"
               />
             </div>
             <div>
