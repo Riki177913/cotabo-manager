@@ -211,6 +211,16 @@ export default function ClienteDettaglioPage() {
             >
               bTaxi Web
             </button>
+            <button
+              onClick={() => setActiveTab('interventi')}
+              className={`pb-3 px-4 font-medium transition whitespace-nowrap ${
+                activeTab === 'interventi' 
+                  ? 'border-b-2 border-blue-600 text-blue-600' 
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              🔧 Interventi
+            </button>
           </div>
         </div>
 
@@ -441,6 +451,24 @@ export default function ClienteDettaglioPage() {
                 <p className="text-sm text-yellow-800">
                   <strong>Nota di Sicurezza:</strong> Le credenziali sono visibili solo al personale autorizzato.
                 </p>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'interventi' && (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-bold text-gray-900">📋 Storico Interventi</h3>
+                <Link 
+                  href={`/clienti/${clientId}/interventi`}
+                  className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition"
+                >
+                  Vedi tutti gli interventi →
+                </Link>
+              </div>
+              
+              <div className="text-center py-8 text-gray-500">
+                <p>Clicca su "Vedi tutti gli interventi" per consultare lo storico completo</p>
               </div>
             </div>
           )}
