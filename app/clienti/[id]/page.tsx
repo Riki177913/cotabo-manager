@@ -145,7 +145,7 @@ export default function ClienteDettaglioPage() {
               <div className="text-center">
                 <h3 className="text-xl font-bold text-gray-900 mb-2">Conferma eliminazione</h3>
                 <p className="text-gray-600 mb-4">
-                  Sei sicuro di voler eliminare il cliente <strong>"{client.company_name}"</strong>?
+                  Sei sicuro di voler eliminare il cliente <strong>{client.company_name}</strong>?
                 </p>
                 
                 <div className="flex gap-3 justify-center">
@@ -341,7 +341,7 @@ export default function ClienteDettaglioPage() {
               {(!client.chiamataxi_contract_date || !client.chiamataxi_payment_start_date || !client.chiamataxi_last_payment_date) && (
                 <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
                   <p className="text-sm text-yellow-800">
-                    <strong>Attenzione:</strong> Alcune informazioni sul contratto non sono state inserite. Clicca su "Modifica Date" per completarle.
+                    <strong>Attenzione:</strong> Alcune informazioni sul contratto non sono state inserite. Clicca su &quot;Modifica Date&quot; per completarle.
                   </p>
                 </div>
               )}
@@ -448,3 +448,120 @@ export default function ClienteDettaglioPage() {
               )}
 
               <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+                <p className="text-sm text-yellow-800">
+                  <strong>Nota di Sicurezza:</strong> Le credenziali sono visibili solo al personale autorizzato.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'interventi' && (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-bold text-gray-900">🔧 Storico Interventi</h3>
+                <Link 
+                  href={`/clienti/${clientId}/interventi`}
+                  className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition"
+                >
+                  Vedi tutti gli interventi →
+                </Link>
+              </div>
+              
+              <InterventiPreview clientId={clientId} />
+            </div>
+          )}
+        </div>
+      </main>
+    </div>
+  )
+}
+
+// Componente per l'anteprima degli interventi
+function InterventiPreview({ clientId }: { clientId: string }) {
+  const [interventi, setInterventi] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const supabase = createClient()
+
+  useEffect(() => {
+    async function loadData() {
+      const { data } = await supabase
+        .from('interventi')
+        .select('*')
+        .eq('client_id', clientId)
+        .order('data_intervento', { ascending: false })
+        .limit(5)
+
+      setInterventi(data || [])
+      setLoading(false)
+    }
+    loadData()
+  }, [clientId])
+
+  const TIPO_LABELS: Record<string, string> = {
+    sostituzione_chiamataxi: '🔄 Sost. Chiamataxi',
+    sostituzione_sim_chiamataxi: '📱 Sost. SIM',
+    sostituzione_batteria_caricabatteria: '🔋 Batteria/Caricab.',
+    assistenza_web: '💻 Assistenza Web',
+    consegna_materiale: '📦 Consegna Materiale',
+    altro: '📋 Altro',
+  }
+
+  const formatDate = (date: string | null) => {
+    if (!date) return 'N/D'
+    return new Date(date).toLocaleDateString('it-IT')
+  }
+
+  if (loading) {
+    return <div className="text-center py-4 text-gray-500">Caricamento...</div>
+  }
+
+  if (interventi.length === 0) {
+    return (
+      <div className="text-center py-8 text-gray-500">
+        <p className="text-lg mb-2">Nessun intervento registrato</p>
+        <p className="text-sm">Clicca su &quot;Vedi tutti gli interventi&quot; per aggiungere il primo</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-3">
+      {interventi.map((intervento) => (
+        <div key={intervento.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+          <div className="flex justify-between items-start">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-sm font-medium text-orange-600">
+                  {TIPO_LABELS[intervento.tipo] || intervento.tipo}
+                </span>
+                <span className={`px-2 py-0.5 text-xs rounded-full ${
+                  intervento.status === 'completato' ? 'bg-green-100 text-green-800' :
+                  intervento.status === 'in_corso' ? 'bg-blue-100 text-blue-800' :
+                  'bg-gray-100 text-gray-800'
+                }`}>
+                  {intervento.status === 'completato' ? 'Completato' :
+                   intervento.status === 'in_corso' ? 'In Corso' : 'Annullato'}
+                </span>
+              </div>
+              <h4 className="font-semibold text-gray-900">{intervento.titolo}</h4>
+              <p className="text-sm text-gray-600 mt-1">
+                📅 {formatDate(intervento.data_intervento)}
+                {intervento.tecnico_nome && ` • 👤 ${intervento.tecnico_nome}`}
+              </p>
+            </div>
+          </div>
+        </div>
+      ))}
+      {interventi.length >= 5 && (
+        <div className="text-center">
+          <Link 
+            href={`/clienti/${clientId}/interventi`}
+            className="text-orange-600 hover:text-orange-800 text-sm font-medium"
+          >
+            Vedi tutti gli interventi →
+          </Link>
+        </div>
+      )}
+    </div>
+  )
+}
