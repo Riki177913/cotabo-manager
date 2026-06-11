@@ -20,7 +20,6 @@ export default function PagamentiPage() {
   async function loadData() {
     setLoading(true)
 
-    // Carica tutti i clienti con Chiamataxi
     const { data: clientsData } = await supabase
       .from('clients')
       .select(`
@@ -35,7 +34,6 @@ export default function PagamentiPage() {
       `)
       .order('company_name', { ascending: true })
 
-    // Carica i pagamenti dell'anno selezionato
     const { data: paymentsData } = await supabase
       .from('payments')
       .select('*')
@@ -50,7 +48,6 @@ export default function PagamentiPage() {
     const existingPayment = payments.find(p => p.client_id === clientId)
 
     if (existingPayment) {
-      // Aggiorna pagamento esistente
       const { error } = await supabase
         .from('payments')
         .update({
@@ -65,7 +62,6 @@ export default function PagamentiPage() {
         return
       }
     } else {
-      // Crea nuovo pagamento
       const { error } = await supabase.from('payments').insert({
         client_id: clientId,
         year: selectedYear,
@@ -82,7 +78,6 @@ export default function PagamentiPage() {
       }
     }
 
-    // Ricarica i dati
     loadData()
   }
 
@@ -97,7 +92,7 @@ export default function PagamentiPage() {
       return
     }
 
-    // Se diventa premium, segna come esente dal pagamento
+    // Se diventa premium, segna come esente
     if (isPremium) {
       const existingPayment = payments.find(p => p.client_id === clientId)
       if (existingPayment) {
@@ -105,15 +100,22 @@ export default function PagamentiPage() {
           .from('payments')
           .update({ is_exempt: true, is_paid: false })
           .eq('id', existingPayment.id)
+      } else {
+        await supabase.from('payments').insert({
+          client_id: clientId,
+          year: selectedYear,
+          amount: 70.00,
+          is_exempt: true,
+          is_paid: false,
+          invoice_date: new Date().toISOString().split('T')[0]
+        })
       }
     }
 
     loadData()
   }
 
-  // Filtra clienti
   let filteredClients = clients.filter(client => {
-    // Mostra solo clienti con Chiamataxi
     const hasChiamataxi = client.chiamataxi_start_date || client.chiamataxi_contract_date
     
     if (showPremiumOnly) {
@@ -128,7 +130,6 @@ export default function PagamentiPage() {
     return hasChiamataxi
   })
 
-  // Calcola statistiche
   const totalClients = filteredClients.length
   const paidClients = filteredClients.filter(c => {
     const payment = payments.find(p => p.client_id === c.id)
@@ -163,7 +164,6 @@ export default function PagamentiPage() {
           <p className="text-gray-600">Canone annuale: 70€ + IVA (esclusi clienti premium fidelizzati)</p>
         </div>
 
-        {/* Statistiche */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
           <div className="bg-white p-4 rounded-xl shadow border-l-4 border-blue-500">
             <p className="text-sm text-gray-600">Totale Clienti</p>
@@ -187,7 +187,6 @@ export default function PagamentiPage() {
           </div>
         </div>
 
-        {/* Filtri */}
         <div className="bg-white p-4 rounded-xl shadow mb-6">
           <div className="flex flex-wrap gap-4 items-center">
             <div>
@@ -241,7 +240,6 @@ export default function PagamentiPage() {
           </div>
         </div>
 
-        {/* Tabella */}
         {loading ? (
           <div className="text-center py-12 text-gray-500">Caricamento...</div>
         ) : (
@@ -263,10 +261,10 @@ export default function PagamentiPage() {
                       Ultima Fattura
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Premium
+                      Stato Cliente
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Stato Pagamento
+                      Pagamento
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Azioni
@@ -300,22 +298,22 @@ export default function PagamentiPage() {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <label className="flex items-center cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={client.is_premium}
-                              onChange={(e) => togglePremiumStatus(client.id, e.target.checked)}
-                              className="w-4 h-4 text-purple-600 rounded"
-                            />
-                            <span className="ml-2 text-sm text-gray-700">
-                              {client.is_premium ? 'Sì' : 'No'}
-                            </span>
-                          </label>
+                          <button
+                            onClick={() => togglePremiumStatus(client.id, !client.is_premium)}
+                            className={`px-3 py-1 rounded-full text-xs font-semibold transition-all hover:scale-105 ${
+                              client.is_premium
+                                ? 'bg-purple-100 text-purple-800 border-2 border-purple-300 shadow-sm'
+                                : 'bg-gray-100 text-gray-600 border-2 border-gray-300'
+                            }`}
+                            title="Clicca per cambiare stato cliente"
+                          >
+                            {client.is_premium ? '👑 Premium' : 'Standard'}
+                          </button>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           {isExempt ? (
                             <span className="px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800">
-                              Esente (Premium)
+                              Esente
                             </span>
                           ) : isPaid ? (
                             <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
@@ -337,7 +335,7 @@ export default function PagamentiPage() {
                                   : 'bg-green-100 text-green-700 hover:bg-green-200'
                               }`}
                             >
-                              {isPaid ? 'Segna come NON pagato' : 'Segna come PAGATO'}
+                              {isPaid ? '↩️ Non pagato' : '✓ Pagato'}
                             </button>
                           )}
                           {isExempt && (
