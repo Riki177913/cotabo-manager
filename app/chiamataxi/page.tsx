@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
+import ClientAutocomplete from '@/app/components/ClientAutocomplete'
 
 export default function ChiamataxiPage() {
   const [devices, setDevices] = useState<any[]>([])
@@ -82,20 +83,18 @@ export default function ChiamataxiPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="bg-blue-700 text-white p-4 shadow-md">
         <div className="container mx-auto flex justify-between items-center">
-          <h1 className="text-xl font-bold"> COTABO Manager</h1>
+          <h1 className="text-xl font-bold">COTABO Manager</h1>
           <Link href="/" className="text-sm bg-blue-800 px-3 py-1 rounded hover:bg-blue-900">
             ← Home
           </Link>
         </div>
       </header>
 
-      {/* Contenuto */}
       <main className="container mx-auto p-8">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-800">📱 Dispositivi Chiamataxi ({devices.length})</h2>
+          <h2 className="text-2xl font-bold text-gray-800">Dispositivi Chiamataxi ({devices.length})</h2>
           <button
             onClick={() => setShowAddModal(true)}
             className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition"
@@ -112,7 +111,6 @@ export default function ChiamataxiPage() {
               <div key={device.id} className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition">
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-3xl">📱</span>
                     <div>
                       <h3 className="font-bold text-gray-900">
                         SIM {device.sim_number?.slice(-4)}
@@ -158,19 +156,19 @@ export default function ChiamataxiPage() {
                         : 'bg-green-100 text-green-700 hover:bg-green-200'
                     }`}
                   >
-                    {device.is_active ? '⏸️ Disattiva' : '▶️ Attiva'}
+                    {device.is_active ? 'Disattiva' : 'Attiva'}
                   </button>
                   <button
                     onClick={() => handleEdit(device)}
                     className="bg-yellow-100 hover:bg-yellow-200 text-yellow-700 px-3 py-1 rounded text-sm font-medium transition"
                   >
-                    ️
+                    Modifica
                   </button>
                   <button
                     onClick={() => handleDelete(device.id)}
                     className="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1 rounded text-sm font-medium transition"
                   >
-                    🗑️
+                    Elimina
                   </button>
                 </div>
               </div>
@@ -184,7 +182,6 @@ export default function ChiamataxiPage() {
         )}
       </main>
 
-      {/* Modal Aggiungi SIM */}
       {showAddModal && (
         <AddDeviceModal
           clients={clients}
@@ -196,7 +193,6 @@ export default function ChiamataxiPage() {
         />
       )}
 
-      {/* Modal Modifica SIM */}
       {showEditModal && editingDevice && (
         <EditDeviceModal
           device={editingDevice}
@@ -216,22 +212,25 @@ export default function ChiamataxiPage() {
   )
 }
 
-// Componente Modal per aggiungere dispositivo
 function AddDeviceModal({ clients, onClose, onSuccess }: { clients: any[], onClose: () => void, onSuccess: () => void }) {
   const [loading, setLoading] = useState(false)
+  const [formData, setFormData] = useState({
+    client_id: '',
+    sim_number: '',
+    pin: '',
+    delivery_date: '',
+  })
   const supabase = createClient()
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setLoading(true)
 
-    const formData = new FormData(e.currentTarget)
-    
     const { error } = await supabase.from('chiamataxi_devices').insert({
-      client_id: formData.get('client_id'),
-      sim_number: formData.get('sim_number'),
-      pin: formData.get('pin'),
-      delivery_date: formData.get('delivery_date') || null,
+      client_id: formData.client_id,
+      sim_number: formData.sim_number,
+      pin: formData.pin,
+      delivery_date: formData.delivery_date || null,
       is_active: true,
     })
 
@@ -247,27 +246,22 @@ function AddDeviceModal({ clients, onClose, onSuccess }: { clients: any[], onClo
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl p-6 max-w-md w-full">
-        <h3 className="text-xl font-bold text-gray-900 mb-4">📱 Aggiungi Nuova SIM</h3>
+        <h3 className="text-xl font-bold text-gray-900 mb-4">Aggiungi Nuova SIM</h3>
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Cliente *</label>
-            <select
-              name="client_id"
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            >
-              <option value="">Seleziona un cliente</option>
-              {clients.map(client => (
-                <option key={client.id} value={client.id}>{client.company_name}</option>
-              ))}
-            </select>
-          </div>
+          <ClientAutocomplete
+            clients={clients}
+            value={formData.client_id}
+            onChange={(value) => setFormData({...formData, client_id: value})}
+            label="Cliente"
+            required={true}
+          />
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Numero SIM *</label>
             <input
-              name="sim_number"
+              value={formData.sim_number}
+              onChange={(e) => setFormData({...formData, sim_number: e.target.value})}
               type="text"
               required
               placeholder="89390123456789"
@@ -278,7 +272,8 @@ function AddDeviceModal({ clients, onClose, onSuccess }: { clients: any[], onClo
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">PIN *</label>
             <input
-              name="pin"
+              value={formData.pin}
+              onChange={(e) => setFormData({...formData, pin: e.target.value})}
               type="text"
               required
               placeholder="1234"
@@ -289,7 +284,8 @@ function AddDeviceModal({ clients, onClose, onSuccess }: { clients: any[], onClo
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Data Consegna</label>
             <input
-              name="delivery_date"
+              value={formData.delivery_date}
+              onChange={(e) => setFormData({...formData, delivery_date: e.target.value})}
               type="date"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
             />
@@ -308,7 +304,7 @@ function AddDeviceModal({ clients, onClose, onSuccess }: { clients: any[], onClo
               disabled={loading}
               className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition disabled:opacity-50"
             >
-              {loading ? 'Salvataggio...' : '💾 Salva'}
+              {loading ? 'Salvataggio...' : 'Salva'}
             </button>
           </div>
         </form>
@@ -317,7 +313,6 @@ function AddDeviceModal({ clients, onClose, onSuccess }: { clients: any[], onClo
   )
 }
 
-// Componente Modal per modificare dispositivo
 function EditDeviceModal({ device, clients, onClose, onSuccess }: { 
   device: any, 
   clients: any[], 
@@ -355,22 +350,16 @@ function EditDeviceModal({ device, clients, onClose, onSuccess }: {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl p-6 max-w-md w-full">
-        <h3 className="text-xl font-bold text-gray-900 mb-4">️ Modifica SIM</h3>
+        <h3 className="text-xl font-bold text-gray-900 mb-4">Modifica SIM</h3>
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Cliente *</label>
-            <select
-              value={formData.client_id}
-              onChange={(e) => setFormData({...formData, client_id: e.target.value})}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            >
-              {clients.map(client => (
-                <option key={client.id} value={client.id}>{client.company_name}</option>
-              ))}
-            </select>
-          </div>
+          <ClientAutocomplete
+            clients={clients}
+            value={formData.client_id}
+            onChange={(value) => setFormData({...formData, client_id: value})}
+            label="Cliente"
+            required={true}
+          />
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Numero SIM *</label>
@@ -406,13 +395,13 @@ function EditDeviceModal({ device, clients, onClose, onSuccess }: {
 
           <div className="flex items-center gap-2">
             <input
-              id="is_active"
+              id="is_active_edit"
               type="checkbox"
               checked={formData.is_active}
               onChange={(e) => setFormData({...formData, is_active: e.target.checked})}
               className="w-4 h-4 text-blue-600 rounded"
             />
-            <label htmlFor="is_active" className="text-sm font-medium text-gray-700">
+            <label htmlFor="is_active_edit" className="text-sm font-medium text-gray-700">
               Dispositivo attivo
             </label>
           </div>
@@ -430,7 +419,7 @@ function EditDeviceModal({ device, clients, onClose, onSuccess }: {
               disabled={loading}
               className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition disabled:opacity-50"
             >
-              {loading ? 'Salvataggio...' : '💾 Aggiorna'}
+              {loading ? 'Salvataggio...' : 'Aggiorna'}
             </button>
           </div>
         </form>

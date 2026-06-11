@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
+import ClientAutocomplete from '@/app/components/ClientAutocomplete'
 
 export default function BTaxiPage() {
   const [credentials, setCredentials] = useState<any[]>([])
@@ -75,20 +76,18 @@ export default function BTaxiPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="bg-blue-700 text-white p-4 shadow-md">
         <div className="container mx-auto flex justify-between items-center">
-          <h1 className="text-xl font-bold">🚖 COTABO Manager</h1>
+          <h1 className="text-xl font-bold">COTABO Manager</h1>
           <Link href="/" className="text-sm bg-blue-800 px-3 py-1 rounded hover:bg-blue-900">
             ← Home
           </Link>
         </div>
       </header>
 
-      {/* Contenuto */}
       <main className="container mx-auto p-8">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-800">🌐 Credenziali bTaxi Web ({credentials.length})</h2>
+          <h2 className="text-2xl font-bold text-gray-800">Credenziali bTaxi Web ({credentials.length})</h2>
           <button
             onClick={() => setShowAddModal(true)}
             className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition"
@@ -105,7 +104,6 @@ export default function BTaxiPage() {
               <div key={cred.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition">
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex items-center gap-3">
-                    <span className="text-3xl">🌐</span>
                     <div>
                       <h3 className="text-lg font-bold text-gray-900">
                         {cred.clients?.company_name || 'Cliente non trovato'}
@@ -123,13 +121,13 @@ export default function BTaxiPage() {
                       onClick={() => handleEdit(cred)}
                       className="bg-yellow-100 hover:bg-yellow-200 text-yellow-700 px-3 py-1 rounded text-sm font-medium transition"
                     >
-                      ✏️ Modifica
+                      Modifica
                     </button>
                     <button
                       onClick={() => handleDelete(cred.id)}
                       className="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1 rounded text-sm font-medium transition"
                     >
-                      🗑️ Elimina
+                      Elimina
                     </button>
                   </div>
                 </div>
@@ -149,7 +147,7 @@ export default function BTaxiPage() {
                         onClick={() => togglePassword(cred.id)}
                         className="text-blue-600 hover:text-blue-800"
                       >
-                        {visiblePasswords[cred.id] ? '🙈' : '👁️'}
+                        {visiblePasswords[cred.id] ? 'Nascondi' : 'Mostra'}
                       </button>
                     </div>
                   </div>
@@ -169,8 +167,8 @@ export default function BTaxiPage() {
                 </div>
 
                 <div className="mt-3 flex items-center gap-2 text-sm text-gray-600">
-                  <span>📅</span>
-                  <span>Inserito il: {new Date(cred.created_at).toLocaleDateString('it-IT')}</span>
+                  <span>Inserito il:</span>
+                  <span>{new Date(cred.created_at).toLocaleDateString('it-IT')}</span>
                 </div>
               </div>
             ))}
@@ -184,12 +182,11 @@ export default function BTaxiPage() {
 
         <div className="mt-6 bg-yellow-50 border-l-4 border-yellow-400 p-4">
           <p className="text-sm text-yellow-800">
-            <strong>⚠️ Nota di Sicurezza:</strong> Le password sono mascherate per default. Clicca sull'icona 👁️ per visualizzarle.
+            <strong>Nota di Sicurezza:</strong> Le password sono mascherate per default. Clicca su "Mostra" per visualizzarle.
           </p>
         </div>
       </main>
 
-      {/* Modal Aggiungi Credenziali */}
       {showAddModal && (
         <AddCredentialsModal
           clients={clients}
@@ -201,7 +198,6 @@ export default function BTaxiPage() {
         />
       )}
 
-      {/* Modal Modifica Credenziali */}
       {showEditModal && editingCredential && (
         <EditCredentialsModal
           cred={editingCredential}
@@ -221,22 +217,25 @@ export default function BTaxiPage() {
   )
 }
 
-// Componente Modal per aggiungere credenziali
 function AddCredentialsModal({ clients, onClose, onSuccess }: { clients: any[], onClose: () => void, onSuccess: () => void }) {
   const [loading, setLoading] = useState(false)
+  const [formData, setFormData] = useState({
+    client_id: '',
+    username: '',
+    password: '',
+    access_url: '',
+  })
   const supabase = createClient()
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setLoading(true)
 
-    const formData = new FormData(e.currentTarget)
-    
     const { error } = await supabase.from('btaxi_credentials').insert({
-      client_id: formData.get('client_id'),
-      username: formData.get('username'),
-      password: formData.get('password'),
-      access_url: formData.get('access_url') || null,
+      client_id: formData.client_id,
+      username: formData.username,
+      password: formData.password,
+      access_url: formData.access_url || null,
     })
 
     if (error) {
@@ -251,27 +250,22 @@ function AddCredentialsModal({ clients, onClose, onSuccess }: { clients: any[], 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl p-6 max-w-md w-full">
-        <h3 className="text-xl font-bold text-gray-900 mb-4">🌐 Aggiungi Credenziali bTaxi Web</h3>
+        <h3 className="text-xl font-bold text-gray-900 mb-4">Aggiungi Credenziali bTaxi Web</h3>
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Cliente *</label>
-            <select
-              name="client_id"
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            >
-              <option value="">Seleziona un cliente</option>
-              {clients.map(client => (
-                <option key={client.id} value={client.id}>{client.company_name}</option>
-              ))}
-            </select>
-          </div>
+          <ClientAutocomplete
+            clients={clients}
+            value={formData.client_id}
+            onChange={(value) => setFormData({...formData, client_id: value})}
+            label="Cliente"
+            required={true}
+          />
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Username *</label>
             <input
-              name="username"
+              value={formData.username}
+              onChange={(e) => setFormData({...formData, username: e.target.value})}
               type="text"
               required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
@@ -281,7 +275,8 @@ function AddCredentialsModal({ clients, onClose, onSuccess }: { clients: any[], 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
             <input
-              name="password"
+              value={formData.password}
+              onChange={(e) => setFormData({...formData, password: e.target.value})}
               type="text"
               required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
@@ -291,7 +286,8 @@ function AddCredentialsModal({ clients, onClose, onSuccess }: { clients: any[], 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">URL di Accesso</label>
             <input
-              name="access_url"
+              value={formData.access_url}
+              onChange={(e) => setFormData({...formData, access_url: e.target.value})}
               type="url"
               placeholder="https://web.btaxi.it/login"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
@@ -311,7 +307,7 @@ function AddCredentialsModal({ clients, onClose, onSuccess }: { clients: any[], 
               disabled={loading}
               className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition disabled:opacity-50"
             >
-              {loading ? 'Salvataggio...' : ' Salva'}
+              {loading ? 'Salvataggio...' : 'Salva'}
             </button>
           </div>
         </form>
@@ -320,7 +316,6 @@ function AddCredentialsModal({ clients, onClose, onSuccess }: { clients: any[], 
   )
 }
 
-// Componente Modal per modificare credenziali
 function EditCredentialsModal({ cred, clients, onClose, onSuccess }: { 
   cred: any, 
   clients: any[], 
@@ -357,22 +352,16 @@ function EditCredentialsModal({ cred, clients, onClose, onSuccess }: {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl p-6 max-w-md w-full">
-        <h3 className="text-xl font-bold text-gray-900 mb-4">✏️ Modifica Credenziali bTaxi Web</h3>
+        <h3 className="text-xl font-bold text-gray-900 mb-4">Modifica Credenziali bTaxi Web</h3>
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Cliente *</label>
-            <select
-              value={formData.client_id}
-              onChange={(e) => setFormData({...formData, client_id: e.target.value})}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            >
-              {clients.map(client => (
-                <option key={client.id} value={client.id}>{client.company_name}</option>
-              ))}
-            </select>
-          </div>
+          <ClientAutocomplete
+            clients={clients}
+            value={formData.client_id}
+            onChange={(value) => setFormData({...formData, client_id: value})}
+            label="Cliente"
+            required={true}
+          />
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Username *</label>
@@ -419,7 +408,7 @@ function EditCredentialsModal({ cred, clients, onClose, onSuccess }: {
               disabled={loading}
               className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition disabled:opacity-50"
             >
-              {loading ? 'Salvataggio...' : '💾 Aggiorna'}
+              {loading ? 'Salvataggio...' : 'Aggiorna'}
             </button>
           </div>
         </form>
