@@ -83,14 +83,18 @@ export default function DashboardPage() {
     )
   }
 
-  // Calcola percentuali
+  // Calcola percentuali come numeri
   const totalItems = stats.totalClients + stats.totalDevices + stats.totalCredentials
-  const clientPercentage = totalItems > 0 ? ((stats.totalClients / totalItems) * 100).toFixed(1) : 0
-  const devicePercentage = totalItems > 0 ? ((stats.totalDevices / totalItems) * 100).toFixed(1) : 0
-  const credentialPercentage = totalItems > 0 ? ((stats.totalCredentials / totalItems) * 100).toFixed(1) : 0
+  const clientPercentageNum = totalItems > 0 ? (stats.totalClients / totalItems) * 100 : 0
+  const devicePercentageNum = totalItems > 0 ? (stats.totalDevices / totalItems) * 100 : 0
+  const credentialPercentageNum = totalItems > 0 ? (stats.totalCredentials / totalItems) * 100 : 0
 
-  const activeClientPercentage = stats.totalClients > 0 ? ((stats.activeClients / stats.totalClients) * 100).toFixed(1) : 0
-  const activeDevicePercentage = stats.totalDevices > 0 ? ((stats.activeDevices / stats.totalDevices) * 100).toFixed(1) : 0
+  const clientPercentage = totalItems > 0 ? ((stats.totalClients / totalItems) * 100).toFixed(1) : '0'
+  const devicePercentage = totalItems > 0 ? ((stats.totalDevices / totalItems) * 100).toFixed(1) : '0'
+  const credentialPercentage = totalItems > 0 ? ((stats.totalCredentials / totalItems) * 100).toFixed(1) : '0'
+
+  const activeClientPercentage = stats.totalClients > 0 ? ((stats.activeClients / stats.totalClients) * 100).toFixed(1) : '0'
+  const activeDevicePercentage = stats.totalDevices > 0 ? ((stats.activeDevices / stats.totalDevices) * 100).toFixed(1) : '0'
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -116,7 +120,7 @@ export default function DashboardPage() {
           {/* Clienti */}
           <div className="bg-white p-6 rounded-xl shadow-lg border-l-4 border-blue-500">
             <div className="flex items-center justify-between mb-4">
-              <div className="text-4xl"></div>
+              <div className="text-4xl">👥</div>
               <div className="text-right">
                 <p className="text-sm text-gray-600">Totale Clienti</p>
                 <p className="text-4xl font-bold text-blue-600">{stats.totalClients}</p>
@@ -158,7 +162,7 @@ export default function DashboardPage() {
                 <span className="font-semibold">{stats.activeDevices}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">️ Inattivi:</span>
+                <span className="text-gray-600">⏸️ Inattivi:</span>
                 <span className="font-semibold">{stats.inactiveDevices}</span>
               </div>
               <div className="mt-3 bg-gray-200 rounded-full h-2">
@@ -184,7 +188,7 @@ export default function DashboardPage() {
             </div>
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-blue-600"> Con password:</span>
+                <span className="text-blue-600">🔐 Con password:</span>
                 <span className="font-semibold">{stats.totalCredentials}</span>
               </div>
               <div className="flex justify-between text-sm">
@@ -215,7 +219,7 @@ export default function DashboardPage() {
             <div className="space-y-4">
               <div>
                 <div className="flex justify-between mb-1">
-                  <span className="text-sm font-medium text-gray-700"> Clienti</span>
+                  <span className="text-sm font-medium text-gray-700">👥 Clienti</span>
                   <span className="text-sm font-bold text-blue-600">{clientPercentage}%</span>
                 </div>
                 <div className="bg-gray-200 rounded-full h-4">
@@ -277,7 +281,7 @@ export default function DashboardPage() {
                     fill="none"
                     stroke="#3b82f6"
                     strokeWidth="40"
-                    strokeDasharray={`${(parseFloat(clientPercentage) / 100) * 502} 502`}
+                    strokeDasharray={`${(clientPercentageNum / 100) * 502} 502`}
                     strokeDashoffset="0"
                     transform="rotate(-90 100 100)"
                   />
@@ -289,8 +293,8 @@ export default function DashboardPage() {
                     fill="none"
                     stroke="#a855f7"
                     strokeWidth="40"
-                    strokeDasharray={`${(parseFloat(devicePercentage) / 100) * 502} 502`}
-                    strokeDashoffset={`-${(parseFloat(clientPercentage) / 100) * 502}`}
+                    strokeDasharray={`${(devicePercentageNum / 100) * 502} 502`}
+                    strokeDashoffset={`-${(clientPercentageNum / 100) * 502}`}
                     transform="rotate(-90 100 100)"
                   />
                   {/* Credenziali */}
@@ -301,8 +305,8 @@ export default function DashboardPage() {
                     fill="none"
                     stroke="#22c55e"
                     strokeWidth="40"
-                    strokeDasharray={`${(parseFloat(credentialPercentage) / 100) * 502} 502`}
-                    strokeDashoffset={`-${((parseFloat(clientPercentage) + parseFloat(devicePercentage)) / 100) * 502}`}
+                    strokeDasharray={`${(credentialPercentageNum / 100) * 502} 502`}
+                    strokeDashoffset={`-${((clientPercentageNum + devicePercentageNum) / 100) * 502}`}
                     transform="rotate(-90 100 100)"
                   />
                 </svg>
@@ -337,7 +341,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Ultimi Clienti */}
           <div className="bg-white p-6 rounded-xl shadow-lg">
-            <h3 className="text-lg font-bold text-gray-900 mb-4"> Ultimi Clienti Aggiunti</h3>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">👥 Ultimi Clienti Aggiunti</h3>
             {stats.recentClients.length > 0 ? (
               <div className="space-y-3">
                 {stats.recentClients.map((client, index) => (
