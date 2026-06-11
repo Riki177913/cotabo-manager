@@ -224,6 +224,20 @@ function AddDeviceModal({ clients, onClose, onSuccess }: { clients: any[], onClo
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    
+    // Validazione: assicurati che client_id sia un UUID valido
+    if (!formData.client_id || formData.client_id.trim() === '') {
+      alert('Errore: Seleziona un cliente dall\'elenco (clicca sul nome dopo aver digitato)')
+      return
+    }
+    
+    // Verifica che sia un UUID valido (formato standard)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!uuidRegex.test(formData.client_id)) {
+      alert('Errore: ID cliente non valido. Seleziona un cliente dall\'elenco a tendina.')
+      return
+    }
+    
     setLoading(true)
 
     const { error } = await supabase.from('chiamataxi_devices').insert({
@@ -331,6 +345,19 @@ function EditDeviceModal({ device, clients, onClose, onSuccess }: {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    
+    // Validazione UUID
+    if (!formData.client_id || formData.client_id.trim() === '') {
+      alert('Errore: Seleziona un cliente dall\'elenco')
+      return
+    }
+    
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!uuidRegex.test(formData.client_id)) {
+      alert('Errore: ID cliente non valido')
+      return
+    }
+    
     setLoading(true)
 
     const { error } = await supabase

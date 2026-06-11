@@ -18,7 +18,6 @@ export default function ClientAutocomplete({ clients, value, onChange, label = '
   const containerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Inizializza il valore quando cambia il client selezionato
   useEffect(() => {
     if (value) {
       const client = clients.find(c => c.id === value)
@@ -30,7 +29,6 @@ export default function ClientAutocomplete({ clients, value, onChange, label = '
     }
   }, [value, clients])
 
-  // Filtra i clienti quando l'utente digita
   useEffect(() => {
     if (inputValue.trim() === '') {
       setFilteredClients(clients)
@@ -43,7 +41,6 @@ export default function ClientAutocomplete({ clients, value, onChange, label = '
     setHighlightedIndex(-1)
   }, [inputValue, clients])
 
-  // Chiudi il dropdown quando si clicca fuori
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -55,7 +52,7 @@ export default function ClientAutocomplete({ clients, value, onChange, label = '
   }, [])
 
   const handleSelect = (client: any) => {
-    onChange(client.id)
+    onChange(client.id)  // Importante: passa l'UUID, non il nome!
     setInputValue(client.company_name)
     setIsOpen(false)
   }
@@ -89,11 +86,10 @@ export default function ClientAutocomplete({ clients, value, onChange, label = '
         onChange={(e) => {
           setInputValue(e.target.value)
           setIsOpen(true)
-          // Resetta il valore selezionato se l'utente modifica il testo
           if (value) {
             const client = clients.find(c => c.id === value)
             if (client && client.company_name !== e.target.value) {
-              onChange('')
+              onChange('')  // Reset se l'utente modifica manualmente
             }
           }
         }}
