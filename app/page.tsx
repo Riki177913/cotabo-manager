@@ -56,6 +56,10 @@ export default function Home() {
             <h3 className="font-bold text-lg mb-2">bTaxi Web</h3>
             <p className="text-sm text-gray-600">Credenziali di accesso</p>
           </Link>
+<Link href="/pagamenti" className="block bg-white p-6 rounded-xl shadow border border-gray-200 hover:shadow-lg hover:border-green-400 transition">
+  <h3 className="font-bold text-lg mb-2">Pagamenti</h3>
+  <p className="text-sm text-gray-600">Gestione canoni Chiamataxi</p>
+</Link>
         </div>
       </main>
     </div>
