@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import ClientAutocomplete from '@/app/components/ClientAutocomplete'
+import ProtectedButton from '@/app/components/ProtectedButton'
 
 export default function ChiamataxiPage() {
   const [devices, setDevices] = useState<any[]>([])
@@ -95,12 +96,13 @@ export default function ChiamataxiPage() {
       <main className="container mx-auto p-8">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-gray-800">Dispositivi Chiamataxi ({devices.length})</h2>
-          <button
+          <ProtectedButton
+            roles={['admin', 'operator']}
             onClick={() => setShowAddModal(true)}
             className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition"
           >
             + Aggiungi SIM
-          </button>
+          </ProtectedButton>
         </div>
 
         {loading ? (
@@ -133,12 +135,24 @@ export default function ChiamataxiPage() {
                 <div className="space-y-2 bg-gray-50 p-3 rounded-lg mb-3">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Numero SIM:</span>
-                    <span className="font-mono font-semibold">{device.sim_number}</span>
+                    <span className="font-mono text-sm font-semibold">{device.sim_number}</span>
                   </div>
+                  {device.iccid && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">ICCID:</span>
+                      <span className="font-mono text-sm font-semibold">{device.iccid}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">PIN:</span>
-                    <span className="font-mono font-semibold">{device.pin}</span>
+                    <span className="font-mono text-sm font-semibold">{device.pin}</span>
                   </div>
+                  {device.puk && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">PUK:</span>
+                      <span className="font-mono text-sm font-semibold">{device.puk}</span>
+                    </div>
+                  )}
                   {device.delivery_date && (
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Consegna:</span>
@@ -148,7 +162,8 @@ export default function ChiamataxiPage() {
                 </div>
 
                 <div className="flex gap-2">
-                  <button
+                  <ProtectedButton
+                    roles={['admin', 'operator']}
                     onClick={() => toggleDeviceStatus(device.id, device.is_active)}
                     className={`flex-1 px-3 py-1 rounded text-sm font-medium transition ${
                       device.is_active 
@@ -157,19 +172,21 @@ export default function ChiamataxiPage() {
                     }`}
                   >
                     {device.is_active ? 'Disattiva' : 'Attiva'}
-                  </button>
-                  <button
+                  </ProtectedButton>
+                  <ProtectedButton
+                    roles={['admin', 'operator']}
                     onClick={() => handleEdit(device)}
                     className="bg-yellow-100 hover:bg-yellow-200 text-yellow-700 px-3 py-1 rounded text-sm font-medium transition"
                   >
                     Modifica
-                  </button>
-                  <button
+                  </ProtectedButton>
+                  <ProtectedButton
+                    roles={['admin']}
                     onClick={() => handleDelete(device.id)}
                     className="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1 rounded text-sm font-medium transition"
                   >
                     Elimina
-                  </button>
+                  </ProtectedButton>
                 </div>
               </div>
             ))}
@@ -218,6 +235,8 @@ function AddDeviceModal({ clients, onClose, onSuccess }: { clients: any[], onClo
     client_id: '',
     sim_number: '',
     pin: '',
+    puk: '',
+    iccid: '',
     delivery_date: '',
   })
   const supabase = createClient()
@@ -225,13 +244,11 @@ function AddDeviceModal({ clients, onClose, onSuccess }: { clients: any[], onClo
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     
-    // Validazione: assicurati che client_id sia un UUID valido
     if (!formData.client_id || formData.client_id.trim() === '') {
       alert('Errore: Seleziona un cliente dall\'elenco (clicca sul nome dopo aver digitato)')
       return
     }
     
-    // Verifica che sia un UUID valido (formato standard)
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
     if (!uuidRegex.test(formData.client_id)) {
       alert('Errore: ID cliente non valido. Seleziona un cliente dall\'elenco a tendina.')
@@ -244,6 +261,8 @@ function AddDeviceModal({ clients, onClose, onSuccess }: { clients: any[], onClo
       client_id: formData.client_id,
       sim_number: formData.sim_number,
       pin: formData.pin,
+      puk: formData.puk || null,
+      iccid: formData.iccid || null,
       delivery_date: formData.delivery_date || null,
       is_active: true,
     })
@@ -284,6 +303,18 @@ function AddDeviceModal({ clients, onClose, onSuccess }: { clients: any[], onClo
           </div>
 
           <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">ICCID</label>
+            <input
+              value={formData.iccid}
+              onChange={(e) => setFormData({...formData, iccid: e.target.value})}
+              type="text"
+              placeholder="89390123456789012345"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            />
+            <p className="text-xs text-gray-500 mt-1">Numero seriale della SIM (19-20 cifre)</p>
+          </div>
+
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">PIN *</label>
             <input
               value={formData.pin}
@@ -293,6 +324,18 @@ function AddDeviceModal({ clients, onClose, onSuccess }: { clients: any[], onClo
               placeholder="1234"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">PUK</label>
+            <input
+              value={formData.puk}
+              onChange={(e) => setFormData({...formData, puk: e.target.value})}
+              type="text"
+              placeholder="12345678"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            />
+            <p className="text-xs text-gray-500 mt-1">Codice PUK (8 cifre)</p>
           </div>
 
           <div>
@@ -338,6 +381,8 @@ function EditDeviceModal({ device, clients, onClose, onSuccess }: {
     client_id: device.client_id,
     sim_number: device.sim_number,
     pin: device.pin,
+    puk: device.puk || '',
+    iccid: device.iccid || '',
     delivery_date: device.delivery_date ? new Date(device.delivery_date).toISOString().split('T')[0] : '',
     is_active: device.is_active,
   })
@@ -346,7 +391,6 @@ function EditDeviceModal({ device, clients, onClose, onSuccess }: {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     
-    // Validazione UUID
     if (!formData.client_id || formData.client_id.trim() === '') {
       alert('Errore: Seleziona un cliente dall\'elenco')
       return
@@ -362,7 +406,15 @@ function EditDeviceModal({ device, clients, onClose, onSuccess }: {
 
     const { error } = await supabase
       .from('chiamataxi_devices')
-      .update(formData)
+      .update({
+        client_id: formData.client_id,
+        sim_number: formData.sim_number,
+        pin: formData.pin,
+        puk: formData.puk || null,
+        iccid: formData.iccid || null,
+        delivery_date: formData.delivery_date || null,
+        is_active: formData.is_active,
+      })
       .eq('id', device.id)
 
     if (error) {
@@ -400,12 +452,32 @@ function EditDeviceModal({ device, clients, onClose, onSuccess }: {
           </div>
 
           <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">ICCID</label>
+            <input
+              value={formData.iccid}
+              onChange={(e) => setFormData({...formData, iccid: e.target.value})}
+              type="text"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            />
+          </div>
+
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">PIN *</label>
             <input
               value={formData.pin}
               onChange={(e) => setFormData({...formData, pin: e.target.value})}
               type="text"
               required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">PUK</label>
+            <input
+              value={formData.puk}
+              onChange={(e) => setFormData({...formData, puk: e.target.value})}
+              type="text"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
             />
           </div>
