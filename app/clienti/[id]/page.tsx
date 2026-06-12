@@ -114,6 +114,14 @@ export default function ClienteDettaglioPage() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">{client.company_name}</h1>
             <p className="text-gray-600">P.IVA: {client.vat_number || 'N/D'}</p>
+            {client.codice_abbonato && (
+              <p className="text-sm mt-1">
+                <span className="text-gray-500">Codice Abbonato:</span>{' '}
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  {client.codice_abbonato}
+                </span>
+              </p>
+            )}
             <div className="mt-2">
               <span className={`inline-block px-3 py-1 rounded-full text-sm ${
                 client.status === 'Attivo' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
@@ -241,7 +249,26 @@ export default function ClienteDettaglioPage() {
                   <p className="text-sm text-gray-600">Email</p>
                   <p className="font-medium">{client.contact_email || 'N/D'}</p>
                 </div>
+                <div>
+                  <p className="text-sm text-gray-600">Codice Abbonato</p>
+                  {client.codice_abbonato ? (
+                    <p className="font-medium">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {client.codice_abbonato}
+                      </span>
+                    </p>
+                  ) : (
+                    <p className="font-medium text-gray-400">N/D</p>
+                  )}
+                </div>
               </div>
+
+              {client.indirizzo && (
+                <div>
+                  <p className="text-sm text-gray-600">Indirizzo</p>
+                  <p className="font-medium whitespace-pre-line">{client.indirizzo}</p>
+                </div>
+              )}
 
               <h3 className="text-lg font-bold text-gray-900 border-b pb-2 pt-4">Date Forniture</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -385,10 +412,22 @@ export default function ClienteDettaglioPage() {
                           <span className="text-sm text-gray-600">Numero SIM:</span>
                           <span className="font-mono text-sm font-semibold">{device.sim_number}</span>
                         </div>
+                        {device.iccid && (
+                          <div className="flex justify-between">
+                            <span className="text-sm text-gray-600">ICCID:</span>
+                            <span className="font-mono text-sm font-semibold">{device.iccid}</span>
+                          </div>
+                        )}
                         <div className="flex justify-between">
                           <span className="text-sm text-gray-600">PIN:</span>
                           <span className="font-mono text-sm font-semibold">{device.pin}</span>
                         </div>
+                        {device.puk && (
+                          <div className="flex justify-between">
+                            <span className="text-sm text-gray-600">PUK:</span>
+                            <span className="font-mono text-sm font-semibold">{device.puk}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
