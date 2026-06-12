@@ -570,8 +570,9 @@ export default function PagamentiPage() {
                                   ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
                                   : 'bg-green-100 text-green-700 hover:bg-green-200'
                               }`}
+                              title={isPaid ? 'Clicca per segnare come NON pagato' : 'Clicca per segnare come PAGATO'}
                             >
-                              {isPaid ? '↩️ Non pagato' : '✓ Pagato'}
+                              {isPaid ? '↩️ Segna non pagato' : '✓ Segna pagato'}
                             </button>
                           )}
                           {isExempt && (
