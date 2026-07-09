@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { createClient } from '@supabase/supabase-js';
+import Link from 'next/link';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+// Inizializza Supabase
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 const COLORS = ['#3B82F6', '#8B5CF6', '#10B981', '#6B7280'];
@@ -24,7 +26,8 @@ export default function DashboardRiepilogo() {
     chiamataxiPercent: 0,
     btaxiPercent: 0,
     categorie: [] as { name: string; value: number }[],
-    loading: true
+    loading: true,
+    error: null as string | null
   });
 
   useEffect(() => {
@@ -33,50 +36,67 @@ export default function DashboardRiepilogo() {
 
   const fetchData = async () => {
     try {
-      // Fetch clients
+      console.log('?? Inizio fetch dati dashboard...');
+      console.log('Supabase URL:', supabaseUrl ? '? Presente' : '? Mancante');
+      console.log('Supabase Key:', supabaseKey ? '? Presente' : '? Mancante');
+
+      const { error: pingError } = await supabase.from('clients').select('id').limit(1);
+      if (pingError) {
+        console.error(' Errore connessione Supabase:', pingError);
+        setStats(prev => ({ ...prev, loading: false, error: pingError.message }));
+        return;
+      }
+
       const { data: clientsData, error: clientsError } = await supabase
         .from('clients')
         .select('id, company_name');
-      
-      if (clientsError) throw clientsError;
-      if (!clientsData) return;
 
-      // Fetch dispositivi
+      console.log('?? Clients fetch:', { count: clientsData?.length, error: clientsError });
+
+      if (clientsError) {
+        console.error('? Errore clients:', clientsError);
+        setStats(prev => ({ ...prev, loading: false, error: clientsError.message }));
+        return;
+      }
+
+      if (!clientsData || clientsData.length === 0) {
+        console.warn('?? Nessun client trovato');
+        setStats(prev => ({ ...prev, loading: false }));
+        return;
+      }
+
       const { data: devicesData, error: devicesError } = await supabase
         .from('chiamataxi_devices')
         .select('id, client_id, is_active');
-      
-      if (devicesError) throw devicesError;
 
-      // Fetch credenziali
+      console.log('?? Devices fetch:', { count: devicesData?.length, error: devicesError });
+
       const { data: credentialsData, error: credentialsError } = await supabase
         .from('btaxi_credentials')
-        .select('id, client_id');
-      
-      if (credentialsError) throw credentialsError;
+        .select('id, client_id, password');
 
-      // Calcola statistiche
+      console.log('?? Credentials fetch:', { count: credentialsData?.length, error: credentialsError });
+
       const totaleClienti = clientsData.length;
-      const clientiUniciConDispositivi = devicesData 
-        ? [...new Set(devicesData.map((d: any) => d.client_id))].length 
+      const clientiUniciConDispositivi = devicesData
+        ? [...new Set(devicesData.map((d: any) => d.client_id))].length
         : 0;
-      const clientiUniciConCredenziali = credentialsData 
-        ? [...new Set(credentialsData.map((c: any) => c.client_id))].length 
+      const clientiUniciConCredenziali = credentialsData
+        ? [...new Set(credentialsData.map((c: any) => c.client_id))].length
         : 0;
 
       const dispositiviAttivi = devicesData?.filter((d: any) => d.is_active === true).length || 0;
       const dispositiviInattivi = devicesData?.filter((d: any) => d.is_active === false).length || 0;
 
-      // Classifica clienti per categoria
-      const categorie = { 
-        'Hotel & B&B': 0, 
-        'Ristoranti & Bar': 0, 
-        'Cliniche & Centri Medici': 0, 
-        'Aziende & Altro': 0 
+      const categorie = {
+        'Hotel & B&B': 0,
+        'Ristoranti & Bar': 0,
+        'Cliniche & Centri Medici': 0,
+        'Aziende & Altro': 0
       };
-      
+
       clientsData.forEach(client => {
-        const name = client.company_name.toUpperCase();
+        const name = client.company_name?.toUpperCase() || '';
         if (name.includes('HOTEL') || name.includes('RESIDENCE') || name.includes('B&B') || name.includes('SUITE')) {
           categorie['Hotel & B&B']++;
         } else if (name.includes('RISTORANTE') || name.includes('TRATTORIA') || name.includes('OSTERIA') || name.includes('PUB')) {
@@ -88,18 +108,20 @@ export default function DashboardRiepilogo() {
         }
       });
 
-      const chiamataxiPercent = totaleClienti > 0 
-        ? parseFloat(((clientiUniciConDispositivi / totaleClienti) * 100).toFixed(1)) 
+      const chiamataxiPercent = totaleClienti > 0
+        ? parseFloat(((clientiUniciConDispositivi / totaleClienti) * 100).toFixed(1))
         : 0;
-      const btaxiPercent = totaleClienti > 0 
-        ? parseFloat(((clientiUniciConCredenziali / totaleClienti) * 100).toFixed(1)) 
+      const btaxiPercent = totaleClienti > 0
+        ? parseFloat(((clientiUniciConCredenziali / totaleClienti) * 100).toFixed(1))
         : 0;
 
-      const mediaPerCliente = totaleClienti > 0 
-        ? parseFloat((((credentialsData?.length || 0) / totaleClienti)).toFixed(1))
+      const mediaPerCliente = totaleClienti > 0
+        ? parseFloat(((credentialsData?.length || 0) / totaleClienti).toFixed(1))
         : 0;
 
       const categorieArray = Object.entries(categorie).map(([name, value]) => ({ name, value }));
+
+      console.log('? Dati calcolati:', { totaleClienti, chiamataxiPercent, btaxiPercent });
 
       setStats({
         totaleClienti,
@@ -114,26 +136,58 @@ export default function DashboardRiepilogo() {
         chiamataxiPercent,
         btaxiPercent,
         categorie: categorieArray,
-        loading: false
+        loading: false,
+        error: null
       });
     } catch (error) {
-      console.error("Errore nel fetch dei dati dashboard:", error);
-      setStats(prev => ({ ...prev, loading: false }));
+      console.error('? Errore generale:', error);
+      setStats(prev => ({ ...prev, loading: false, error: String(error) }));
     }
   };
 
   if (stats.loading) {
     return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Caricamento dati...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (stats.error) {
+    return (
       <div className="min-h-screen bg-gray-50 p-8">
-        <div className="text-center text-gray-500">Caricamento dati...</div>
+        <div className="max-w-4xl mx-auto">
+          <Link href="/" className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors mb-6">
+            ? Home
+          </Link>
+          <div className="bg-red-50 border border-red-200 rounded-xl p-6">
+            <h2 className="text-xl font-bold text-red-800 mb-2">Errore nel caricamento dati</h2>
+            <p className="text-red-600">{stats.error}</p>
+            <p className="text-sm text-gray-600 mt-4">Controlla la console del browser (F12) per maggiori dettagli.</p>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
+    <div className="min-h-screen bg-gray-50">
+      <header className="bg-blue-800 text-white shadow-lg">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">??</span>
+            <h1 className="text-xl font-bold">COTABO Manager</h1>
+          </div>
+          <Link href="/" className="inline-flex items-center gap-2 px-4 py-2 bg-blue-700 hover:bg-blue-600 rounded-lg transition-colors">
+            ? Home
+          </Link>
+        </div>
+      </header>
+
+      <div className="max-w-7xl mx-auto p-6 space-y-6">
         <div className="flex items-center gap-3 mb-6">
           <div className="p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl shadow-lg">
             <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -141,14 +195,12 @@ export default function DashboardRiepilogo() {
             </svg>
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-gray-800">Dashboard Riepilogativa</h1>
+            <h2 className="text-3xl font-bold text-gray-800">Dashboard Riepilogativa</h2>
             <p className="text-sm text-gray-500">Panoramica completa del sistema</p>
           </div>
         </div>
 
-        {/* SEZIONE ORIGINALE - Le 3 Card */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Card Clienti */}
           <div className="bg-white rounded-xl shadow-lg border-l-4 border-blue-500 p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="p-3 bg-purple-100 rounded-lg">
@@ -179,7 +231,7 @@ export default function DashboardRiepilogo() {
             </div>
             <div className="mt-3 pt-3 border-t border-gray-200">
               <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
+                <div
                   className="bg-green-500 h-2 rounded-full"
                   style={{ width: `${stats.totaleClienti > 0 ? (stats.clientiAttivi / stats.totaleClienti) * 100 : 0}%` }}
                 ></div>
@@ -190,7 +242,6 @@ export default function DashboardRiepilogo() {
             </div>
           </div>
 
-          {/* Card Dispositivi */}
           <div className="bg-white rounded-xl shadow-lg border-l-4 border-purple-500 p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="p-3 bg-indigo-100 rounded-lg">
@@ -221,7 +272,7 @@ export default function DashboardRiepilogo() {
             </div>
             <div className="mt-3 pt-3 border-t border-gray-200">
               <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
+                <div
                   className="bg-green-500 h-2 rounded-full"
                   style={{ width: `${stats.totaleDispositivi > 0 ? (stats.dispositiviAttivi / stats.totaleDispositivi) * 100 : 0}%` }}
                 ></div>
@@ -232,7 +283,6 @@ export default function DashboardRiepilogo() {
             </div>
           </div>
 
-          {/* Card Credenziali */}
           <div className="bg-white rounded-xl shadow-lg border-l-4 border-green-500 p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="p-3 bg-emerald-100 rounded-lg">
@@ -263,7 +313,7 @@ export default function DashboardRiepilogo() {
             </div>
             <div className="mt-3 pt-3 border-t border-gray-200">
               <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
+                <div
                   className="bg-green-500 h-2 rounded-full"
                   style={{ width: `${stats.totaleClienti > 0 ? (stats.totaleCredenziali / stats.totaleClienti) * 100 : 0}%` }}
                 ></div>
@@ -273,7 +323,6 @@ export default function DashboardRiepilogo() {
           </div>
         </div>
 
-        {/* NUOVA SEZIONE - Utilizzo Servizi */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100 shadow-lg">
             <div className="flex items-center justify-between mb-4">
@@ -281,7 +330,7 @@ export default function DashboardRiepilogo() {
               <span className="text-3xl font-bold text-blue-600">{stats.chiamataxiPercent}%</span>
             </div>
             <div className="w-full bg-white rounded-full h-4 shadow-inner">
-              <div 
+              <div
                 className="bg-gradient-to-r from-blue-500 to-indigo-600 h-4 rounded-full transition-all duration-700"
                 style={{ width: `${stats.chiamataxiPercent}%` }}
               ></div>
@@ -295,7 +344,7 @@ export default function DashboardRiepilogo() {
               <span className="text-3xl font-bold text-emerald-600">{stats.btaxiPercent}%</span>
             </div>
             <div className="w-full bg-white rounded-full h-4 shadow-inner">
-              <div 
+              <div
                 className="bg-gradient-to-r from-emerald-500 to-green-600 h-4 rounded-full transition-all duration-700"
                 style={{ width: `${stats.btaxiPercent}%` }}
               ></div>
@@ -304,7 +353,6 @@ export default function DashboardRiepilogo() {
           </div>
         </div>
 
-        {/* NUOVA SEZIONE - Distribuzione per Categoria */}
         <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
             <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -313,9 +361,8 @@ export default function DashboardRiepilogo() {
             </svg>
             Distribuzione Clienti per Tipologia
           </h3>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Grafico a Torta */}
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -338,11 +385,10 @@ export default function DashboardRiepilogo() {
               </ResponsiveContainer>
             </div>
 
-            {/* Lista Dettagli */}
             <div className="space-y-3">
               {stats.categorie.map((cat, index) => {
-                const perc = stats.totaleClienti > 0 
-                  ? ((cat.value / stats.totaleClienti) * 100).toFixed(1) 
+                const perc = stats.totaleClienti > 0
+                  ? ((cat.value / stats.totaleClienti) * 100).toFixed(1)
                   : '0';
                 return (
                   <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
@@ -357,7 +403,7 @@ export default function DashboardRiepilogo() {
                   </div>
                 );
               })}
-              
+
               <div className="mt-4 pt-4 border-t border-gray-200">
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-semibold text-gray-700">Totale Clienti:</span>
