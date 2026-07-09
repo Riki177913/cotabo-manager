@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// Inizializza Supabase (assicurati che le variabili d'ambiente siano corrette)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 const COLORS = ['#3B82F6', '#8B5CF6', '#10B981', '#6B7280'];
 
@@ -16,7 +16,7 @@ export default function DashboardRiepilogo() {
     totaleClienti: 0,
     chiamataxiPercent: 0,
     btaxiPercent: 0,
-    categorie: [],
+    categorie: [] as { name: string; value: number }[],
     loading: true
   });
 
@@ -25,50 +25,63 @@ export default function DashboardRiepilogo() {
   }, []);
 
   const fetchData = async () => {
-    // Fetch clients
-    const { data: clientsData } = await supabase.from('clients').select('id, company_name');
-    
-    // Classifica clienti per categoria
-    const categorie = { 
-      'Hotel & B&B': 0, 
-      'Ristoranti & Bar': 0, 
-      'Cliniche & Centri Medici': 0, 
-      'Aziende & Altro': 0 
-    };
-    
-    clientsData.forEach(client => {
-      const name = client.company_name.toUpperCase();
-      if (name.includes('HOTEL') || name.includes('RESIDENCE') || name.includes('B&B') || name.includes('SUITE')) {
-        categorie['Hotel & B&B']++;
-      } else if (name.includes('RISTORANTE') || name.includes('TRATTORIA') || name.includes('OSTERIA') || name.includes('PUB')) {
-        categorie['Ristoranti & Bar']++;
-      } else if (name.includes('CLINICA') || name.includes('OSPEDALE') || name.includes('CENTRO MEDICO') || name.includes('TERME')) {
-        categorie['Cliniche & Centri Medici']++;
-      } else {
-        categorie['Aziende & Altro']++;
+    try {
+      // 1. Fetch clients
+      const { data: clientsData } = await supabase.from('clients').select('id, company_name');
+      
+      // Controllo di sicurezza per TypeScript
+      if (!clientsData) {
+        setData(prev => ({ ...prev, loading: false }));
+        return;
       }
-    });
 
-    // Fetch dispositivi e credenziali
-    const { data: devices } = await supabase.from('chiamataxi_devices').select('client_id');
-    const { data: credentials } = await supabase.from('btaxi_credentials').select('client_id');
+      // Classifica clienti per categoria
+      const categorie = { 
+        'Hotel & B&B': 0, 
+        'Ristoranti & Bar': 0, 
+        'Cliniche & Centri Medici': 0, 
+        'Aziende & Altro': 0 
+      };
+      
+      clientsData.forEach(client => {
+        const name = client.company_name.toUpperCase();
+        if (name.includes('HOTEL') || name.includes('RESIDENCE') || name.includes('B&B') || name.includes('SUITE')) {
+          categorie['Hotel & B&B']++;
+        } else if (name.includes('RISTORANTE') || name.includes('TRATTORIA') || name.includes('OSTERIA') || name.includes('PUB')) {
+          categorie['Ristoranti & Bar']++;
+        } else if (name.includes('CLINICA') || name.includes('OSPEDALE') || name.includes('CENTRO MEDICO') || name.includes('TERME')) {
+          categorie['Cliniche & Centri Medici']++;
+        } else {
+          categorie['Aziende & Altro']++;
+        }
+      });
 
-    const totale = clientsData.length;
-    const uniciChiamataxi = [...new Set(devices.map(d => d.client_id))].length;
-    const uniciBtaxi = [...new Set(credentials.map(c => c.client_id))].length;
+      // 2. Fetch dispositivi e credenziali
+      const { data: devices } = await supabase.from('chiamataxi_devices').select('client_id');
+      const { data: credentials } = await supabase.from('btaxi_credentials').select('client_id');
 
-    const chiamataxiPerc = totale > 0 ? ((uniciChiamataxi / totale) * 100).toFixed(1) : 0;
-    const btaxiPerc = totale > 0 ? ((uniciBtaxi / totale) * 100).toFixed(1) : 0;
+      const totale = clientsData.length;
+      
+      // Gestione sicura dei dati dispositivi/credenziali
+      const uniciChiamataxi = devices ? [...new Set(devices.map((d: any) => d.client_id))].length : 0;
+      const uniciBtaxi = credentials ? [...new Set(credentials.map((c: any) => c.client_id))].length : 0;
 
-    const categorieArray = Object.entries(categorie).map(([name, value]) => ({ name, value }));
+      const chiamataxiPerc = totale > 0 ? ((uniciChiamataxi / totale) * 100).toFixed(1) : 0;
+      const btaxiPerc = totale > 0 ? ((uniciBtaxi / totale) * 100).toFixed(1) : 0;
 
-    setData({
-      totaleClienti: totale,
-      chiamataxiPercent: chiamataxiPerc,
-      btaxiPercent: btaxiPerc,
-      categorie: categorieArray,
-      loading: false
-    });
+      const categorieArray = Object.entries(categorie).map(([name, value]) => ({ name, value }));
+
+      setData({
+        totaleClienti: totale,
+        chiamataxiPercent: chiamataxiPerc,
+        btaxiPercent: btaxiPerc,
+        categorie: categorieArray,
+        loading: false
+      });
+    } catch (error) {
+      console.error("Errore nel fetch dei dati dashboard:", error);
+      setData(prev => ({ ...prev, loading: false }));
+    }
   };
 
   if (data.loading) {
