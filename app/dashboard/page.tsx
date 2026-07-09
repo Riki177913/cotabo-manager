@@ -66,8 +66,8 @@ export default function DashboardRiepilogo() {
       const uniciChiamataxi = devices ? [...new Set(devices.map((d: any) => d.client_id))].length : 0;
       const uniciBtaxi = credentials ? [...new Set(credentials.map((c: any) => c.client_id))].length : 0;
 
-      const chiamataxiPerc = totale > 0 ? ((uniciChiamataxi / totale) * 100).toFixed(1) : 0;
-      const btaxiPerc = totale > 0 ? ((uniciBtaxi / totale) * 100).toFixed(1) : 0;
+      const chiamataxiPerc = totale > 0 ? parseFloat(((uniciChiamataxi / totale) * 100).toFixed(1)) : 0;
+      const btaxiPerc = totale > 0 ? parseFloat(((uniciBtaxi / totale) * 100).toFixed(1)) : 0;
 
       const categorieArray = Object.entries(categorie).map(([name, value]) => ({ name, value }));
 
