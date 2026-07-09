@@ -104,7 +104,7 @@ export default function ChiamataxiPage() {
             onClick={() => setShowAddModal(true)}
             className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition"
           >
-            + Aggiungi SIM
+            + Aggiungi Chiamataxi
           </ProtectedButton>
         </div>
 
@@ -146,10 +146,12 @@ export default function ChiamataxiPage() {
                       <span className="font-mono text-sm font-semibold">{device.iccid}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">PIN:</span>
-                    <span className="font-mono text-sm font-semibold">{device.pin}</span>
-                  </div>
+                  {device.pin && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">PIN:</span>
+                      <span className="font-mono text-sm font-semibold">{device.pin}</span>
+                    </div>
+                  )}
                   {device.puk && (
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">PUK:</span>
@@ -160,6 +162,18 @@ export default function ChiamataxiPage() {
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Consegna:</span>
                       <span>{new Date(device.delivery_date).toLocaleDateString('it-IT')}</span>
+                    </div>
+                  )}
+                  {device.carrier && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Operatore:</span>
+                      <span className="font-semibold">{device.carrier}</span>
+                    </div>
+                  )}
+                  {device.imei && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">IMEI:</span>
+                      <span className="font-mono text-sm font-semibold">{device.imei}</span>
                     </div>
                   )}
                 </div>
@@ -197,7 +211,7 @@ export default function ChiamataxiPage() {
         ) : (
           <div className="bg-white p-8 rounded-xl border border-dashed border-gray-300 text-center">
             <p className="text-gray-500 text-lg mb-2">Nessun dispositivo registrato</p>
-            <p className="text-sm text-gray-400">Clicca su "Aggiungi SIM" per inserire il primo dispositivo</p>
+            <p className="text-sm text-gray-400">Clicca su "Aggiungi Chiamataxi" per inserire il primo dispositivo</p>
           </div>
         )}
       </main>
@@ -241,6 +255,8 @@ function AddDeviceModal({ clients, onClose, onSuccess }: { clients: any[], onClo
     puk: '',
     iccid: '',
     delivery_date: '',
+    carrier: '',
+    imei: '',
   })
   const supabase = createClient()
 
@@ -267,6 +283,8 @@ function AddDeviceModal({ clients, onClose, onSuccess }: { clients: any[], onClo
       puk: formData.puk || null,
       iccid: formData.iccid || null,
       delivery_date: formData.delivery_date || null,
+      carrier: formData.carrier || null,
+      imei: formData.imei || null,
       is_active: true,
     })
 
@@ -282,7 +300,7 @@ function AddDeviceModal({ clients, onClose, onSuccess }: { clients: any[], onClo
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl p-6 max-w-md w-full">
-        <h3 className="text-xl font-bold text-gray-900 mb-4">Aggiungi Nuova SIM</h3>
+        <h3 className="text-xl font-bold text-gray-900 mb-4">Aggiungi Nuovo Chiamataxi</h3>
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <ClientAutocomplete
@@ -342,6 +360,38 @@ function AddDeviceModal({ clients, onClose, onSuccess }: { clients: any[], onClo
           </div>
 
           <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Operatore Telefonico</label>
+            <select
+              value={formData.carrier}
+              onChange={(e) => setFormData({...formData, carrier: e.target.value})}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            >
+              <option value="">-- Seleziona operatore --</option>
+              <option value="TIM">TIM</option>
+              <option value="Vodafone">Vodafone</option>
+              <option value="WindTre">WindTre</option>
+              <option value="Iliad">Iliad</option>
+              <option value="Fastweb">Fastweb</option>
+              <option value="Ho Mobile">Ho Mobile</option>
+              <option value="Kena">Kena</option>
+              <option value="Spusu">Spusu</option>
+              <option value="Altro">Altro</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">IMEI Dispositivo</label>
+            <input
+              value={formData.imei}
+              onChange={(e) => setFormData({...formData, imei: e.target.value})}
+              type="text"
+              placeholder="353456789012345"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            />
+            <p className="text-xs text-gray-500 mt-1">Codice IMEI del dispositivo (15 cifre)</p>
+          </div>
+
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Data Consegna</label>
             <input
               value={formData.delivery_date}
@@ -387,6 +437,8 @@ function EditDeviceModal({ device, clients, onClose, onSuccess }: {
     puk: device.puk || '',
     iccid: device.iccid || '',
     delivery_date: device.delivery_date ? new Date(device.delivery_date).toISOString().split('T')[0] : '',
+    carrier: device.carrier || '',
+    imei: device.imei || '',
     is_active: device.is_active,
   })
   const supabase = createClient()
@@ -416,6 +468,8 @@ function EditDeviceModal({ device, clients, onClose, onSuccess }: {
         puk: formData.puk || null,
         iccid: formData.iccid || null,
         delivery_date: formData.delivery_date || null,
+        carrier: formData.carrier || null,
+        imei: formData.imei || null,
         is_active: formData.is_active,
       })
       .eq('id', device.id)
@@ -432,7 +486,7 @@ function EditDeviceModal({ device, clients, onClose, onSuccess }: {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl p-6 max-w-md w-full">
-        <h3 className="text-xl font-bold text-gray-900 mb-4">Modifica SIM</h3>
+        <h3 className="text-xl font-bold text-gray-900 mb-4">Modifica Chiamataxi</h3>
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <ClientAutocomplete
@@ -483,6 +537,38 @@ function EditDeviceModal({ device, clients, onClose, onSuccess }: {
               type="text"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Operatore Telefonico</label>
+            <select
+              value={formData.carrier}
+              onChange={(e) => setFormData({...formData, carrier: e.target.value})}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            >
+              <option value="">-- Seleziona operatore --</option>
+              <option value="TIM">TIM</option>
+              <option value="Vodafone">Vodafone</option>
+              <option value="WindTre">WindTre</option>
+              <option value="Iliad">Iliad</option>
+              <option value="Fastweb">Fastweb</option>
+              <option value="Ho Mobile">Ho Mobile</option>
+              <option value="Kena">Kena</option>
+              <option value="Spusu">Spusu</option>
+              <option value="Altro">Altro</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">IMEI Dispositivo</label>
+            <input
+              value={formData.imei}
+              onChange={(e) => setFormData({...formData, imei: e.target.value})}
+              type="text"
+              placeholder="353456789012345"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            />
+            <p className="text-xs text-gray-500 mt-1">Codice IMEI del dispositivo (15 cifre)</p>
           </div>
 
           <div>
