@@ -1,422 +1,184 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { createClient } from '@/utils/supabase/client'
-import Link from 'next/link'
+import React, { useEffect, useState } from 'react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { createClient } from '@supabase/supabase-js';
 
-export default function DashboardPage() {
-  const [stats, setStats] = useState({
-    totalClients: 0,
-    activeClients: 0,
-    inactiveClients: 0,
-    totalDevices: 0,
-    activeDevices: 0,
-    inactiveDevices: 0,
-    totalCredentials: 0,
-    recentClients: [] as any[],
-    recentDevices: [] as any[],
-  })
-  const [loading, setLoading] = useState(true)
-  const supabase = createClient()
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+);
+
+const COLORS = ['#3B82F6', '#8B5CF6', '#10B981', '#6B7280'];
+
+export default function DashboardRiepilogo() {
+  const [data, setData] = useState({
+    totaleClienti: 0,
+    chiamataxiPercent: 0,
+    btaxiPercent: 0,
+    categorie: [],
+    loading: true
+  });
 
   useEffect(() => {
-    loadStats()
-  }, [])
+    fetchData();
+  }, []);
 
-  async function loadStats() {
-    // Conta clienti
-    const { count: totalClients } = await supabase
-      .from('clients')
-      .select('*', { count: 'exact', head: true })
+  const fetchData = async () => {
+    // Fetch clients
+    const { data: clientsData } = await supabase.from('clients').select('id, company_name');
     
-    const { data: activeClientsData } = await supabase
-      .from('clients')
-      .select('id')
-      .eq('status', 'Attivo')
+    // Classifica clienti per categoria
+    const categorie = { 
+      'Hotel & B&B': 0, 
+      'Ristoranti & Bar': 0, 
+      'Cliniche & Centri Medici': 0, 
+      'Aziende & Altro': 0 
+    };
     
-    const { data: recentClients } = await supabase
-      .from('clients')
-      .select('company_name, created_at, status')
-      .order('created_at', { ascending: false })
-      .limit(5)
+    clientsData.forEach(client => {
+      const name = client.company_name.toUpperCase();
+      if (name.includes('HOTEL') || name.includes('RESIDENCE') || name.includes('B&B') || name.includes('SUITE')) {
+        categorie['Hotel & B&B']++;
+      } else if (name.includes('RISTORANTE') || name.includes('TRATTORIA') || name.includes('OSTERIA') || name.includes('PUB')) {
+        categorie['Ristoranti & Bar']++;
+      } else if (name.includes('CLINICA') || name.includes('OSPEDALE') || name.includes('CENTRO MEDICO') || name.includes('TERME')) {
+        categorie['Cliniche & Centri Medici']++;
+      } else {
+        categorie['Aziende & Altro']++;
+      }
+    });
 
-    // Conta dispositivi
-    const { count: totalDevices } = await supabase
-      .from('chiamataxi_devices')
-      .select('*', { count: 'exact', head: true })
-    
-    const { data: activeDevicesData } = await supabase
-      .from('chiamataxi_devices')
-      .select('id')
-      .eq('is_active', true)
-    
-    const { data: recentDevices } = await supabase
-      .from('chiamataxi_devices')
-      .select('sim_number, created_at, is_active, clients(company_name)')
-      .order('created_at', { ascending: false })
-      .limit(5)
+    // Fetch dispositivi e credenziali
+    const { data: devices } = await supabase.from('chiamataxi_devices').select('client_id');
+    const { data: credentials } = await supabase.from('btaxi_credentials').select('client_id');
 
-    // Conta credenziali
-    const { count: totalCredentials } = await supabase
-      .from('btaxi_credentials')
-      .select('*', { count: 'exact', head: true })
+    const totale = clientsData.length;
+    const uniciChiamataxi = [...new Set(devices.map(d => d.client_id))].length;
+    const uniciBtaxi = [...new Set(credentials.map(c => c.client_id))].length;
 
-    setStats({
-      totalClients: totalClients || 0,
-      activeClients: activeClientsData?.length || 0,
-      inactiveClients: (totalClients || 0) - (activeClientsData?.length || 0),
-      totalDevices: totalDevices || 0,
-      activeDevices: activeDevicesData?.length || 0,
-      inactiveDevices: (totalDevices || 0) - (activeDevicesData?.length || 0),
-      totalCredentials: totalCredentials || 0,
-      recentClients: recentClients || [],
-      recentDevices: recentDevices || [],
-    })
-    setLoading(false)
-  }
+    const chiamataxiPerc = totale > 0 ? ((uniciChiamataxi / totale) * 100).toFixed(1) : 0;
+    const btaxiPerc = totale > 0 ? ((uniciBtaxi / totale) * 100).toFixed(1) : 0;
 
-  if (loading) {
+    const categorieArray = Object.entries(categorie).map(([name, value]) => ({ name, value }));
+
+    setData({
+      totaleClienti: totale,
+      chiamataxiPercent: chiamataxiPerc,
+      btaxiPercent: btaxiPerc,
+      categorie: categorieArray,
+      loading: false
+    });
+  };
+
+  if (data.loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-500">Caricamento dashboard...</p>
+      <div className="bg-white rounded-xl shadow-sm p-6">
+        <div className="text-center text-gray-500">Caricamento dati...</div>
       </div>
-    )
+    );
   }
-
-  // Calcola percentuali come numeri
-  const totalItems = stats.totalClients + stats.totalDevices + stats.totalCredentials
-  const clientPercentageNum = totalItems > 0 ? (stats.totalClients / totalItems) * 100 : 0
-  const devicePercentageNum = totalItems > 0 ? (stats.totalDevices / totalItems) * 100 : 0
-  const credentialPercentageNum = totalItems > 0 ? (stats.totalCredentials / totalItems) * 100 : 0
-
-  const clientPercentage = totalItems > 0 ? ((stats.totalClients / totalItems) * 100).toFixed(1) : '0'
-  const devicePercentage = totalItems > 0 ? ((stats.totalDevices / totalItems) * 100).toFixed(1) : '0'
-  const credentialPercentage = totalItems > 0 ? ((stats.totalCredentials / totalItems) * 100).toFixed(1) : '0'
-
-  const activeClientPercentage = stats.totalClients > 0 ? ((stats.activeClients / stats.totalClients) * 100).toFixed(1) : '0'
-  const activeDevicePercentage = stats.totalDevices > 0 ? ((stats.activeDevices / stats.totalDevices) * 100).toFixed(1) : '0'
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-gradient-to-r from-blue-700 to-blue-900 text-white p-4 shadow-md">
-        <div className="container mx-auto flex justify-between items-center">
-          <h1 className="text-xl font-bold">🚖 COTABO Manager</h1>
-          <Link href="/" className="text-sm bg-blue-800 px-3 py-1 rounded hover:bg-blue-900">
-            ← Home
-          </Link>
+    <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 space-y-6">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="p-2 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg">
+          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
         </div>
-      </header>
-
-      <main className="container mx-auto p-8">
-        {/* Titolo Dashboard */}
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900">📊 Dashboard Riepilogativa</h2>
-          <p className="text-gray-600 mt-1">Panoramica completa del sistema</p>
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800">Dashboard Riepilogativa</h2>
+          <p className="text-sm text-gray-500">Panoramica completa del sistema</p>
         </div>
+      </div>
 
-        {/* Card Principali */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {/* Clienti */}
-          <div className="bg-white p-6 rounded-xl shadow-lg border-l-4 border-blue-500">
-            <div className="flex items-center justify-between mb-4">
-              <div className="text-4xl">👥</div>
-              <div className="text-right">
-                <p className="text-sm text-gray-600">Totale Clienti</p>
-                <p className="text-4xl font-bold text-blue-600">{stats.totalClients}</p>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-green-600">✅ Attivi:</span>
-                <span className="font-semibold">{stats.activeClients}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">⏸️ Inattivi:</span>
-                <span className="font-semibold">{stats.inactiveClients}</span>
-              </div>
-              <div className="mt-3 bg-gray-200 rounded-full h-2">
-                <div 
-                  className="bg-green-500 h-2 rounded-full transition-all"
-                  style={{ width: `${activeClientPercentage}%` }}
-                ></div>
-              </div>
-              <p className="text-xs text-gray-500 text-center">
-                {activeClientPercentage}% attivi
-              </p>
-            </div>
+      {/* SEZIONE 1: Utilizzo Servizi */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-700">Utilizzo Chiamataxi</h3>
+            <span className="text-3xl font-bold text-blue-600">{data.chiamataxiPercent}%</span>
           </div>
-
-          {/* Dispositivi Chiamataxi */}
-          <div className="bg-white p-6 rounded-xl shadow-lg border-l-4 border-purple-500">
-            <div className="flex items-center justify-between mb-4">
-              <div className="text-4xl">📱</div>
-              <div className="text-right">
-                <p className="text-sm text-gray-600">Dispositivi Chiamataxi</p>
-                <p className="text-4xl font-bold text-purple-600">{stats.totalDevices}</p>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-green-600">✅ Attivi:</span>
-                <span className="font-semibold">{stats.activeDevices}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">⏸️ Inattivi:</span>
-                <span className="font-semibold">{stats.inactiveDevices}</span>
-              </div>
-              <div className="mt-3 bg-gray-200 rounded-full h-2">
-                <div 
-                  className="bg-green-500 h-2 rounded-full transition-all"
-                  style={{ width: `${activeDevicePercentage}%` }}
-                ></div>
-              </div>
-              <p className="text-xs text-gray-500 text-center">
-                {activeDevicePercentage}% attivi
-              </p>
-            </div>
+          <div className="w-full bg-white rounded-full h-4 shadow-inner">
+            <div 
+              className="bg-gradient-to-r from-blue-500 to-indigo-600 h-4 rounded-full transition-all duration-700"
+              style={{ width: `${data.chiamataxiPercent}%` }}
+            ></div>
           </div>
-
-          {/* Credenziali bTaxi */}
-          <div className="bg-white p-6 rounded-xl shadow-lg border-l-4 border-green-500">
-            <div className="flex items-center justify-between mb-4">
-              <div className="text-4xl">🌐</div>
-              <div className="text-right">
-                <p className="text-sm text-gray-600">Credenziali bTaxi Web</p>
-                <p className="text-4xl font-bold text-green-600">{stats.totalCredentials}</p>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-blue-600">🔐 Con password:</span>
-                <span className="font-semibold">{stats.totalCredentials}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">📊 Media per cliente:</span>
-                <span className="font-semibold">
-                  {stats.totalClients > 0 ? (stats.totalCredentials / stats.totalClients).toFixed(1) : 0}
-                </span>
-              </div>
-              <div className="mt-3 bg-gray-200 rounded-full h-2">
-                <div 
-                  className="bg-green-500 h-2 rounded-full transition-all"
-                  style={{ width: `${stats.totalClients > 0 ? Math.min((stats.totalCredentials / stats.totalClients) * 100, 100) : 0}%` }}
-                ></div>
-              </div>
-              <p className="text-xs text-gray-500 text-center">
-                Copertura credenziali
-              </p>
-            </div>
-          </div>
+          <p className="mt-2 text-sm text-gray-600">Clienti attivi con dispositivi</p>
         </div>
 
-        {/* Grafico Distribuzione */}
-        <div className="bg-white p-6 rounded-xl shadow-lg mb-8">
-          <h3 className="text-xl font-bold text-gray-900 mb-6">📈 Distribuzione Totale</h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Grafico a barre orizzontali */}
-            <div className="space-y-4">
-              <div>
-                <div className="flex justify-between mb-1">
-                  <span className="text-sm font-medium text-gray-700">👥 Clienti</span>
-                  <span className="text-sm font-bold text-blue-600">{clientPercentage}%</span>
-                </div>
-                <div className="bg-gray-200 rounded-full h-4">
-                  <div 
-                    className="bg-blue-500 h-4 rounded-full transition-all flex items-center justify-end pr-2"
-                    style={{ width: `${clientPercentage}%` }}
-                  >
-                    <span className="text-xs text-white font-bold">{stats.totalClients}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between mb-1">
-                  <span className="text-sm font-medium text-gray-700">📱 Dispositivi</span>
-                  <span className="text-sm font-bold text-purple-600">{devicePercentage}%</span>
-                </div>
-                <div className="bg-gray-200 rounded-full h-4">
-                  <div 
-                    className="bg-purple-500 h-4 rounded-full transition-all flex items-center justify-end pr-2"
-                    style={{ width: `${devicePercentage}%` }}
-                  >
-                    <span className="text-xs text-white font-bold">{stats.totalDevices}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between mb-1">
-                  <span className="text-sm font-medium text-gray-700">🌐 Credenziali</span>
-                  <span className="text-sm font-bold text-green-600">{credentialPercentage}%</span>
-                </div>
-                <div className="bg-gray-200 rounded-full h-4">
-                  <div 
-                    className="bg-green-500 h-4 rounded-full transition-all flex items-center justify-end pr-2"
-                    style={{ width: `${credentialPercentage}%` }}
-                  >
-                    <span className="text-xs text-white font-bold">{stats.totalCredentials}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t">
-                <p className="text-sm text-gray-600">
-                  <strong>Totale elementi nel sistema:</strong> {totalItems}
-                </p>
-              </div>
-            </div>
-
-            {/* Grafico a torta con CSS */}
-            <div className="flex items-center justify-center">
-              <div className="relative">
-                <svg width="200" height="200" viewBox="0 0 200 200">
-                  {/* Clienti */}
-                  <circle
-                    cx="100"
-                    cy="100"
-                    r="80"
-                    fill="none"
-                    stroke="#3b82f6"
-                    strokeWidth="40"
-                    strokeDasharray={`${(clientPercentageNum / 100) * 502} 502`}
-                    strokeDashoffset="0"
-                    transform="rotate(-90 100 100)"
-                  />
-                  {/* Dispositivi */}
-                  <circle
-                    cx="100"
-                    cy="100"
-                    r="80"
-                    fill="none"
-                    stroke="#a855f7"
-                    strokeWidth="40"
-                    strokeDasharray={`${(devicePercentageNum / 100) * 502} 502`}
-                    strokeDashoffset={`-${(clientPercentageNum / 100) * 502}`}
-                    transform="rotate(-90 100 100)"
-                  />
-                  {/* Credenziali */}
-                  <circle
-                    cx="100"
-                    cy="100"
-                    r="80"
-                    fill="none"
-                    stroke="#22c55e"
-                    strokeWidth="40"
-                    strokeDasharray={`${(credentialPercentageNum / 100) * 502} 502`}
-                    strokeDashoffset={`-${((clientPercentageNum + devicePercentageNum) / 100) * 502}`}
-                    transform="rotate(-90 100 100)"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center">
-                    <p className="text-3xl font-bold text-gray-900">{totalItems}</p>
-                    <p className="text-xs text-gray-600">Totale</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+        <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl p-6 border border-emerald-100">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-700">Utilizzo BTaxiWeb</h3>
+            <span className="text-3xl font-bold text-emerald-600">{data.btaxiPercent}%</span>
           </div>
-
-          {/* Legenda */}
-          <div className="flex flex-wrap gap-6 mt-6 pt-6 border-t">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-blue-500 rounded"></div>
-              <span className="text-sm text-gray-700">Clienti ({stats.totalClients})</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-purple-500 rounded"></div>
-              <span className="text-sm text-gray-700">Dispositivi ({stats.totalDevices})</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-green-500 rounded"></div>
-              <span className="text-sm text-gray-700">Credenziali ({stats.totalCredentials})</span>
-            </div>
+          <div className="w-full bg-white rounded-full h-4 shadow-inner">
+            <div 
+              className="bg-gradient-to-r from-emerald-500 to-green-600 h-4 rounded-full transition-all duration-700"
+              style={{ width: `${data.btaxiPercent}%` }}
+            ></div>
           </div>
+          <p className="mt-2 text-sm text-gray-600">Clienti con credenziali web</p>
         </div>
+      </div>
 
-        {/* Attività Recente */}
+      {/* SEZIONE 2: Distribuzione per Categoria */}
+      <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+        <h3 className="text-lg font-semibold text-gray-700 mb-4">Distribuzione Clienti per Tipologia</h3>
+        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Ultimi Clienti */}
-          <div className="bg-white p-6 rounded-xl shadow-lg">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">👥 Ultimi Clienti Aggiunti</h3>
-            {stats.recentClients.length > 0 ? (
-              <div className="space-y-3">
-                {stats.recentClients.map((client, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-gray-900">{client.company_name}</p>
-                      <p className="text-xs text-gray-500">
-                        {new Date(client.created_at).toLocaleDateString('it-IT')}
-                      </p>
-                    </div>
-                    <span className={`text-xs px-2 py-1 rounded-full ${
-                      client.status === 'Attivo' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {client.status}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500 text-center py-4">Nessun cliente registrato</p>
-            )}
+          {/* Grafico a Torta */}
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={data.categorie}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {data.categorie.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value) => [`${value} clienti`, 'Totale']} />
+              </PieChart>
+            </ResponsiveContainer>
           </div>
 
-          {/* Ultimi Dispositivi */}
-          <div className="bg-white p-6 rounded-xl shadow-lg">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">📱 Ultimi Dispositivi Aggiunti</h3>
-            {stats.recentDevices.length > 0 ? (
-              <div className="space-y-3">
-                {stats.recentDevices.map((device, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-mono font-medium text-gray-900">
-                        SIM ...{device.sim_number?.slice(-4)}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {device.clients?.company_name} • {new Date(device.created_at).toLocaleDateString('it-IT')}
-                      </p>
-                    </div>
-                    <span className={`text-xs px-2 py-1 rounded-full ${
-                      device.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {device.is_active ? 'Attiva' : 'Inattiva'}
-                    </span>
+          {/* Lista Dettagli */}
+          <div className="space-y-3">
+            {data.categorie.map((cat, index) => {
+              const perc = ((cat.value / data.totaleClienti) * 100).toFixed(1);
+              return (
+                <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="w-4 h-4 rounded-full" style={{ backgroundColor: COLORS[index] }}></div>
+                    <span className="text-sm font-medium text-gray-700">{cat.name}</span>
                   </div>
-                ))}
+                  <div className="text-right">
+                    <span className="block text-lg font-bold text-gray-800">{cat.value}</span>
+                    <span className="block text-xs text-gray-500">{perc}%</span>
+                  </div>
+                </div>
+              );
+            })}
+            
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-semibold text-gray-700">Totale Clienti:</span>
+                <span className="text-xl font-bold text-gray-900">{data.totaleClienti}</span>
               </div>
-            ) : (
-              <p className="text-gray-500 text-center py-4">Nessun dispositivo registrato</p>
-            )}
+            </div>
           </div>
         </div>
-
-        {/* Link Rapidi */}
-        <div className="mt-8 bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-xl border border-blue-200">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">⚡ Azioni Rapide</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Link href="/clienti/nuovo" className="bg-white p-3 rounded-lg text-center hover:shadow-md transition">
-              <div className="text-2xl mb-1">➕</div>
-              <p className="text-sm font-medium">Nuovo Cliente</p>
-            </Link>
-            <Link href="/chiamataxi" className="bg-white p-3 rounded-lg text-center hover:shadow-md transition">
-              <div className="text-2xl mb-1">📱</div>
-              <p className="text-sm font-medium">Gestisci SIM</p>
-            </Link>
-            <Link href="/btaxi" className="bg-white p-3 rounded-lg text-center hover:shadow-md transition">
-              <div className="text-2xl mb-1">🌐</div>
-              <p className="text-sm font-medium">Credenziali</p>
-            </Link>
-            <Link href="/clienti" className="bg-white p-3 rounded-lg text-center hover:shadow-md transition">
-              <div className="text-2xl mb-1">📋</div>
-              <p className="text-sm font-medium">Lista Clienti</p>
-            </Link>
-          </div>
-        </div>
-      </main>
+      </div>
     </div>
-  )
+  );
 }
